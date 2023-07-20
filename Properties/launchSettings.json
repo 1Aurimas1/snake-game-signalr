@@ -11,7 +11,7 @@
     "snake_game": {
       "commandName": "Project",
       "launchBrowser": true,
-      "applicationUrl": "https://localhost:7087;http://localhost:5117",
+      "applicationUrl": "https://localhost:8000;http://localhost:8001",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy"
