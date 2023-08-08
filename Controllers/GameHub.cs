@@ -1,10 +1,29 @@
-using System.Net.WebSockets;
 using Microsoft.AspNetCore.SignalR;
 
-public class GameHub: Hub
+public class GameHub : Hub<IGameClient>
 {
-    public async Task SendMessage(string user)
+    private readonly GameManager _gameManager;
+
+    public GameHub(GameManager gameManager)
     {
-        await Clients.All.SendAsync("ReceiveMessage", "Message from server");
+        _gameManager = gameManager;
+    }
+
+    public async Task<string> JoinGame(string playerId)
+    {
+        playerId = Context.ConnectionId;
+        return _gameManager.JoinGameRoom(playerId);
+    }
+
+    public async Task<Tuple<int, int>> InitGrid()
+    {
+        return new Tuple<int, int>(Grid.Rows, Grid.Cols);
+    }
+
+    public async Task SendInput(string playerId, Direction direction)
+    {
+        playerId = Context.ConnectionId;
+        _gameManager.UpdatePlayerMovePosition(playerId, direction);
     }
 }
+
