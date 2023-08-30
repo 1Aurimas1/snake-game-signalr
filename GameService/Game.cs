@@ -1,43 +1,48 @@
+enum GameStatus
+{
+    Initialized,
+    Running,
+    Finished,
+}
+
 class Game
 {
     private Point _food;
 
     private bool _toUpdateFood;
-    private bool _isStarted;
-    private bool _isFinished;
 
-    public Player Player { get; }
-    public Snake Snake;
-    public bool IsRunning
-    {
-        get
-        {
-            return !(_isStarted || _isFinished);
-        }
-    }
+    public string Player { get; }
+    public Snake Snake { get; private set; }
+    public GameStatus Status { get; private set; }
 
-
-    public Game(string playerId, string playerName)
+    public Game(string playerName)
     {
         Snake = new Snake();
         _food = SpawnFood();
 
         _toUpdateFood = true;
-        _isStarted = false;
-        _isFinished = false;
+        Status = GameStatus.Initialized;
 
-        Player = new Player(playerId, playerName);
+        Player = playerName;
+    }
+
+    public bool Start()
+    {
+        if (Status != GameStatus.Initialized) return false;
+
+        Status = GameStatus.Running;
+        return true;
     }
 
     public void UpdateState()
     {
-        if (!IsRunning) return;
+        if (Status != GameStatus.Running) return;
         ResetUpdateChecks();
 
         Point nextPos = Snake.NextHeadPosition();
         if (IsColliding(nextPos))
         {
-            _isFinished = true;
+            Status = GameStatus.Finished;
         }
         else if (_food == nextPos)
         {
@@ -47,7 +52,7 @@ class Game
         }
         else if (Grid.Size == Snake.Length() + 1)
         {
-            _isFinished = true;
+            Status = GameStatus.Finished;
         }
         else
         {
@@ -64,8 +69,9 @@ class Game
     {
         return new GameDto()
         {
-            PlayerId = Player.Id,
+            PlayerName = Player,
             SnakeParts = Snake.Parts(),
+            Score = _toUpdateFood ? Snake.Growth : null,
             Food = _toUpdateFood ? _food : null,
         };
     }

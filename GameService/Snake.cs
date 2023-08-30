@@ -2,17 +2,17 @@ class Snake
 {
     private readonly byte _initSize;
     private List<Point> _parts;
-    //private int _eatenFoodIdx;
     private Point _movePos;
+
+    public int Growth { get => _parts.Count - _initSize; }
 
     public Snake()
     {
-        _initSize = 1;
+        _initSize = 3;
 
         _parts = new List<Point>();
-        for (int i = _initSize; i >= 0; i--)
+        for (int i = _initSize - 1; i >= 0; i--)
             _parts.Add(new Point(i, 0));
-        //_eatenFoodIdx = -1;
 
         _movePos = _parts.Last() + MovePositions.Get(Direction.Right);
     }
@@ -29,13 +29,6 @@ class Snake
     public void Move()
     {
         int tailIdx = _parts.Count - 1;
-        //if (_eatenFoodIdx > -1) {
-        //    if (++_eatenFoodIdx >= _parts.Count) {
-        //        tailIdx--;
-        //        _parts.Add(new Point(_parts.Last()));
-        //        _eatenFoodIdx = -1;
-        //    }
-        //}
 
         for (int i = tailIdx; i > 0; i--)
         {
@@ -46,8 +39,7 @@ class Snake
 
     public void Grow()
     {
-        // consider using linked list?
-        //_eatenFoodIdx = 0;
+        // TODO: consider using linked list?
         _parts.Insert(0, _parts[0] + _movePos);
     }
 
