@@ -2,13 +2,14 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import Input from "./Input";
+import Input from "../components/Input";
 import {
   passwordValidation,
   usernameValidation,
 } from "../utils/inputValidations";
 import { ServerError } from "../shared/interfaces/ServerError";
 import logo from "/snake_64_bw.png";
+import Button from "../components/Button";
 
 interface State {
   isRegistrationSuccessful: boolean;
@@ -100,12 +101,7 @@ export const Login = () => {
         >
           <Input {...usernameValidation} serverError={serverErrors} />
           <Input {...passwordValidation} serverError={serverErrors} />
-          <button
-            onClick={onSubmit}
-            className="w-28 rounded bg-gray-500 py-2 font-bold text-white hover:bg-gray-200 hover:text-black active:bg-red-500 active:text-black"
-          >
-            Log in
-          </button>
+          <Button onClick={onSubmit} text="Log In" />
         </form>
       </FormProvider>
       <p>

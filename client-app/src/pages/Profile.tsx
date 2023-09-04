@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import Spinner from "./Spinner";
-import Stat from "./Stat";
+import Spinner from "../components/Spinner";
+import Stat from "../components/Stat";
+import ContentWrapper from "../components/ContentWrapper";
 
 interface ProfileDto {
   wins: number;
@@ -51,20 +52,17 @@ export const Profile = () => {
   }, []);
 
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="flex flex-col items-center justify-center border border-black bg-gray-200 p-5">
-        <h1 className="mx-5 mb-5 text-xl font-bold">Playtime statistics</h1>
-        {profile ? (
-          <div>
-            <Stat name={"Wins:"} value={profile.wins} />
-            <Stat name={"Losses:"} value={profile.losses} />
-            <Stat name={"Highscore:"} value={profile.highscore} />
-          </div>
-        ) : (
-          <Spinner text="Loading..." />
-        )}
-      </div>
-    </div>
+    <ContentWrapper title="Playtime statistics">
+      {profile ? (
+        <div>
+          <Stat name={"Wins:"} value={profile.wins} />
+          <Stat name={"Losses:"} value={profile.losses} />
+          <Stat name={"Highscore:"} value={profile.highscore} />
+        </div>
+      ) : (
+        <Spinner text="Loading..." />
+      )}
+    </ContentWrapper>
   );
 };
 

@@ -1,13 +1,16 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Login from "../src/components/Login";
-import Register from "../src/components/Register";
+
 import { AuthProvider } from "./hooks/useAuth";
 import RequireAuth from "../src/components/RequireAuth";
-import GameModeSelection from "./components/GameModeSelection";
-import GameRoom from "./components/GameRoom";
-import NotFound from "./components/NotFound";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import GameModeSelection from "./pages/GameModeSelection";
+import GameRoom from "./pages/GameRoom";
+import Profile from "./pages/Profile";
+import NotFound from "./pages/NotFound";
+
 import Layout from "./components/Layout";
-import Profile from "./components/Profile";
 
 function App() {
   return (

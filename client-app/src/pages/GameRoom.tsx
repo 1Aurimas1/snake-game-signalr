@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   HubConnection,
   HubConnectionBuilder,
   LogLevel,
 } from "@microsoft/signalr";
-import { Link, useLocation } from "react-router-dom";
 import { GameMode } from "../shared/constants/GameMode";
-import Game from "./Game";
 import { GameDto } from "../shared/interfaces/GameDto";
-import Spinner from "./Spinner";
+import Game from "../components/Game";
+import Spinner from "../components/Spinner";
+import ErrorComponent from "../components/ErrorComponent";
 
 interface Grid {
   rows: number;
@@ -43,18 +44,11 @@ const GameRoom = () => {
 
   if (selectedMode == null) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <h1 className="text-3xl font-semibold capitalize">user input error</h1>
-        <p className="font-semibold text-red-500">
-          Before starting to play please select game mode
-        </p>
-        <Link
-          to="/"
-          className="mt-4 rounded border-2 border-black bg-gray-500 p-2 font-semibold text-white hover:bg-gray-200 hover:text-black active:bg-red-500 active:text-black"
-        >
-          Go to game mode selection?
-        </Link>
-      </div>
+      <ErrorComponent
+        title="user input error"
+        helperMessage="Before starting to play please select game mode!"
+        redirectMessage="Go to game mode selection?"
+      />
     );
   }
 

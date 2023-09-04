@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FormProvider, useForm } from "react-hook-form";
 import {
@@ -6,9 +7,9 @@ import {
   passwordValidation,
   usernameValidation,
 } from "../utils/inputValidations";
-import Input from "./Input";
-import { useRef, useState } from "react";
 import { ServerError } from "../shared/interfaces/ServerError";
+import Input from "../components/Input";
+import Button from "../components/Button";
 
 interface FormInput {
   username: string;
@@ -95,12 +96,7 @@ export const Register = () => {
         <Input {...emailValidation} serverError={serverErrors} />
         <Input {...passwordValidation} serverError={serverErrors} />
         <Input {...passwordConfirmationValidation} serverError={serverErrors} />
-        <button
-          onClick={onSubmit}
-          className="w-28 rounded bg-gray-500 py-2 font-bold text-white hover:bg-gray-200 hover:text-black active:bg-red-500 active:text-black"
-        >
-          Register
-        </button>
+        <Button onClick={onSubmit} text="Register" />
         <p>
           Have an account?&nbsp;
           <Link
