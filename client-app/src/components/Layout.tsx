@@ -7,9 +7,11 @@ export const Layout = () => {
   const { user } = useAuth();
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-screen w-full flex-col">
       {user && <NavBar />}
-      <Outlet />
+      <div className="m-10 flex flex-grow justify-center">
+        <Outlet />
+      </div>
       <Footer />
     </div>
   );

@@ -9,7 +9,7 @@ interface Props {
 
 export const ErrorComponent = (props: Props) => {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-5">
+    <div className="flex flex-col items-center justify-center gap-5">
       <h1 className="text-4xl font-semibold capitalize">{props.title}</h1>
       <p className="text-gray-500">{props.helperMessage}</p>
       <Link

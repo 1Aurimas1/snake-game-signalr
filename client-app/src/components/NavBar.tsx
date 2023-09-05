@@ -38,15 +38,17 @@ export const NavBar = () => {
 
   return (
     <nav className="bg-gray-500 p-4">
-      <div className="flex flex-row flex-wrap items-center justify-between">
-        <div className="w-1/2 sm:w-fit">
+      <div className="grid grid-cols-2 items-center">
+        <div className="w-fit">
           <Link to="/">
             <img className="h-10 w-10" src={logo} alt="My logo" />
           </Link>
         </div>
-        <ul className="hidden space-x-4 sm:flex">{mappedLinks}</ul>
+        <ul className="hidden space-x-4 sm:flex sm:justify-self-end">
+          {mappedLinks}
+        </ul>
 
-        <div className="flex w-1/2 flex-col sm:hidden">
+        <div className="flex flex-col sm:hidden">
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="ml-auto text-gray-300 hover:text-white focus:text-white focus:outline-none"

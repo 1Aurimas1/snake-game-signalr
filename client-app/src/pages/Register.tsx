@@ -90,7 +90,7 @@ export const Register = () => {
         onSubmit={(e) => e.preventDefault()}
         noValidate
         autoComplete="off"
-        className="flex h-screen flex-col items-center justify-center gap-5"
+        className="flex flex-col items-center justify-center gap-5"
       >
         <Input {...usernameValidation} serverError={serverErrors} />
         <Input {...emailValidation} serverError={serverErrors} />

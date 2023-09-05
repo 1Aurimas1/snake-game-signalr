@@ -82,7 +82,7 @@ export const Login = () => {
   });
 
   return (
-    <div className="flex h-screen flex-col items-center gap-5">
+    <div className="flex flex-col items-center gap-5">
       <h1 className="mb-32 mt-24 text-7xl font-thin">
         <img src={logo} className="float-left mr-1" alt="S" />
         nake game
