@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   HubConnection,
   HubConnectionBuilder,
@@ -35,7 +35,7 @@ const Controls = {
 let playerName: string | null = sessionStorage.getItem("username");
 
 let roomId: string;
-const inputBlockTime = 100;
+const inputBlockTime = 400;
 
 const GameRoom = () => {
   const location = useLocation();
@@ -79,32 +79,24 @@ const GameRoom = () => {
       }
     });
 
-    connection
-      .start()
-      .then(() => {
-        console.log("SignalR connection established.");
-        connection
-          .invoke("JoinGame", playerName, selectedMode)
-          .then((data: string) => {
-            roomId = data;
-            connection
-              .invoke("InitGrid")
-              .then((data) => {
-                const gridDims: Grid = {
-                  rows: data.item1,
-                  columns: data.item2,
-                };
-                setGrid(gridDims);
-              })
-              .catch((e) => console.error(`Error initializing grid: ${e}`));
-          })
-          .catch((e) => console.error(`Error joining game: ${e}`));
-      })
-      .catch((error) => {
-        console.error("Error starting SignalR connection:", error);
-      });
+    const startConnection = async () => {
+      try {
+        await connection.start();
+        roomId = await connection.invoke("JoinGame", playerName, selectedMode);
 
-    if (!hub.current) hub.current = connection;
+        const data = await connection.invoke("InitGrid");
+        const gridDims: Grid = {
+          rows: data.item1,
+          columns: data.item2,
+        };
+        setGrid(gridDims);
+      } catch (error) {
+        console.error("Error starting SignalR connection: ", error);
+      }
+    };
+
+    startConnection();
+    hub.current = connection;
 
     return () => {
       connection.stop();
@@ -140,9 +132,9 @@ const GameRoom = () => {
   }, [countdown]);
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (isInputBlocked.current) return;
+    if (isInputBlocked.current || !hub.current) return;
 
-    let newDirection: Direction | undefined;
+    let newDirection: Direction;
     if (
       Controls.UP.includes(event.key) &&
       direction.current !== Direction.DOWN &&
@@ -167,14 +159,15 @@ const GameRoom = () => {
       direction.current !== Direction.RIGHT
     ) {
       newDirection = Direction.RIGHT;
+    } else {
+      return;
     }
-
-    if (newDirection === undefined || !hub.current) return;
-    direction.current = newDirection;
 
     hub.current
       .invoke("SendInput", roomId, playerName, newDirection)
       .catch((e) => console.error("[SendInput] error: ", e));
+
+    direction.current = newDirection;
 
     isInputBlocked.current = true;
     setTimeout(() => {
@@ -191,7 +184,7 @@ const GameRoom = () => {
   }, []);
 
   return (
-    <div className="relative h-screen">
+    <div className="relative">
       {isStarting && (
         <Spinner
           className="absolute bottom-0 left-0 right-0 top-0 z-40"
