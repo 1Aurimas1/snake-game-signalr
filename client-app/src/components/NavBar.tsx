@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useState } from "react";
-import logo from "/snake_64_bw.png";
+import logo from "../assets/snake_64_bw.png";
 
 const navItems = [
   { name: "Mode selection", path: "/" },

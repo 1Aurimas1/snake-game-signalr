@@ -8,7 +8,7 @@ import {
   usernameValidation,
 } from "../utils/inputValidations";
 import { ServerError } from "../shared/interfaces/ServerError";
-import logo from "/snake_64_bw.png";
+import logo from "../assets/snake_64_bw.png";
 import Button from "../components/Button";
 
 interface State {
