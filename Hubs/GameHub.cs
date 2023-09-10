@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
-//[Authorize]
+[Authorize]
 public class GameHub : Hub<IGameClient>
 {
     private readonly GameManager _gameManager;

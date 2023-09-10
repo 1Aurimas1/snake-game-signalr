@@ -31,16 +31,16 @@ const Controls = {
   RIGHT: ["ArrowRight", "d"],
 };
 
-// TODO: if null ask user to relog?
-let playerName: string | null = sessionStorage.getItem("username");
-
-let roomId: string;
 const inputBlockTime = 400;
 
 const GameRoom = () => {
+  // TODO: if null ask user to relog?
+  let playerName: string | null = sessionStorage.getItem("username");
+  let roomId: string;
+
   const location = useLocation();
   const selectedMode: GameMode = location.state?.selectedMode;
-  //const userToken: string = location.state?.user;
+  const userToken: string = location.state?.user;
 
   if (selectedMode == null) {
     return (
@@ -64,8 +64,7 @@ const GameRoom = () => {
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      //.withUrl("/gamehub",  { accessTokenFactory: () => userToken })
-      .withUrl("/gamehub")
+      .withUrl("/gamehub", { accessTokenFactory: () => userToken })
       .configureLogging(LogLevel.Information)
       .build();
 
