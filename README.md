@@ -5,28 +5,30 @@ Multiplayer snake game that utilizes SignalR for real-time communication and JWT
 ## Prerequisites
 
 - .NET 7.0+
-- Postgresql server
+- PostgreSQL database server
 - node v18.13.0+
 - pnpm/npm/yarn
 
 ## Setup
 
-- If using other then pnpm, change pnpm commands located in snake-game.csproj to chosen package manager's
-- Install `$ dotnet tool install --global dotnet-ef`
-- Run `$ dotnet ef database update`
+- If you are using a package manager other than `pnpm`, update the `pnpm` commands in the `snake-game.csproj` file to match your chosen node package manager's commands.
+- Install dotnet-ef: `$ dotnet tool install --global dotnet-ef`
+- Update database to the last migration: `$ dotnet ef database update`
 
 ## Quick start
 
-- Start Postgresql server
+- Start PostgreSQL server
 - `$ dotnet run` (or run through visual studio)
 
 ## Troubleshooting
 
-- If there's an issue when trying to register or login, try creating new user in Postgres and editing connection string located in appsettings.json accordingly.
+- If you encounter any issues while attempting to register or log in, consider: 
+    1. creating a new user in PostgreSQL db server
+    2. adjusting the connection string in the `appsettings.json` file accordingly
 
 ## Controls
 
-- `w`, `a`, `s`, `d` or `arrow keys` - changes snake's direction
+- `w`, `a`, `s`, `d` or `arrow` keys - to change snake's movement direction
 
 ## Screenshots
 
