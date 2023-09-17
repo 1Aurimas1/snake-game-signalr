@@ -71,7 +71,7 @@ const Game = (props: Props) => {
     return cell;
   };
 
-  // TODO: pre-allocate grid?
+  // IDEA: pre-allocate grid?
   return (
     <div className="m-10 flex flex-col items-center justify-center gap-5">
       {snake.length > 0 && food && (

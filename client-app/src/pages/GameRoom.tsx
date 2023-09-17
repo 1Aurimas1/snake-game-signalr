@@ -31,10 +31,8 @@ const Controls = {
   RIGHT: ["ArrowRight", "d"],
 };
 
-const inputBlockTime = 400;
-
 const GameRoom = () => {
-  // TODO: if null ask user to relog?
+  // IDEA: if null ask user to relog?
   let playerName: string | null = sessionStorage.getItem("username");
   let roomId: string;
 
@@ -60,7 +58,7 @@ const GameRoom = () => {
   const [gameStates, setGameStates] = useState<GameDto[]>([]);
 
   const direction = useRef<Direction>();
-  const isInputBlocked = useRef(false);
+  const wasInputProcessed = useRef(true);
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
@@ -108,6 +106,10 @@ const GameRoom = () => {
     hub.current.on(
       "ReceiveStateObjects",
       (gameStates: GameDto[], initial: boolean) => {
+        if (wasInputProcessed.current === false) {
+          wasInputProcessed.current = true;
+        }
+
         setIsStarting(initial);
         setGameStates(gameStates);
       },
@@ -131,7 +133,7 @@ const GameRoom = () => {
   }, [countdown]);
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (isInputBlocked.current || !hub.current) return;
+    if (!wasInputProcessed.current || !hub.current) return;
 
     let newDirection: Direction;
     if (
@@ -167,11 +169,7 @@ const GameRoom = () => {
       .catch((e) => console.error("[SendInput] error: ", e));
 
     direction.current = newDirection;
-
-    isInputBlocked.current = true;
-    setTimeout(() => {
-      isInputBlocked.current = false;
-    }, inputBlockTime);
+    wasInputProcessed.current = false;
   };
 
   useEffect(() => {

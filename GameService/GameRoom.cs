@@ -32,7 +32,6 @@ class GameRoom
 
     public bool CanJoin(string playerName)
     {
-        System.Console.WriteLine(!Games.Any(g => g.Player == playerName));
         return Status == GameRoomStatus.OpenToJoin && !Games.Any(g => g.Player == playerName);
     }
 
