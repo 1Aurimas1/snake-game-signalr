@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using snake_game.Models;
@@ -35,7 +36,10 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // TODO: password hashing
+        var hasher = new PasswordHasher<UserDto>();
+        var hash = hasher.HashPassword(userDto, userDto.Password);
+        userDto.Password = hash;
+
         _context.Users.Add(new User(userDto));
         await _context.SaveChangesAsync();
 
@@ -46,10 +50,25 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<string>> Login(UserDto userDto)
     {
         var u = await _context.Users.FirstOrDefaultAsync(u => u.Username == userDto.Username);
+
         if (u == null)
             ModelState.AddModelError(nameof(userDto.Username), "User not registered");
-        else if (u.PasswordHash != userDto.Password)
-            ModelState.AddModelError(nameof(userDto.Username), "Incorrect login information");
+        else
+        {
+            var hasher = new PasswordHasher<UserDto>();
+            var verificationResult = hasher.VerifyHashedPassword(userDto, u!.PasswordHash, userDto.Password);
+
+            if (verificationResult == PasswordVerificationResult.Failed)
+                ModelState.AddModelError(nameof(userDto.Username), "Incorrect login information");
+            else if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                System.Console.WriteLine("Deprecated algorithm was used. Rehashing password...");
+                var newHash = hasher.HashPassword(userDto, userDto.Password);
+
+                u.PasswordHash = newHash;
+                await _context.SaveChangesAsync();
+            }
+        }
 
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
