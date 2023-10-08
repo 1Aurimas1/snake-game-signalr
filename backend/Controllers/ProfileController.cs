@@ -32,7 +32,7 @@ public class ProfileController : ControllerBase
         if (profile == null)
             return BadRequest("User profile not found");
 
-        var dto = new ProfileDto(profile);
+        ProfileDto dto = new(profile);
 
         return Ok(dto);
     }

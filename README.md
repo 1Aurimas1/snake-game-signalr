@@ -6,8 +6,8 @@ Multiplayer snake game that utilizes SignalR for real-time communication and JWT
 
 - .NET 7.0+
 - PostgreSQL database server
-- node v18.13.0+
-- pnpm/npm/yarn
+- Node v18.13.0+
+- Node package manager: pnpm/npm/yarn
 
 ## Setup
 
@@ -17,8 +17,13 @@ Multiplayer snake game that utilizes SignalR for real-time communication and JWT
 
 ## Quick start
 
-- Start PostgreSQL server
-- `$ dotnet run` (or run through visual studio)
+1. Start PostgreSQL server
+2. Start backend:
+    1. `$ cd backend`
+    2. `$ dotnet run`
+3. Start frontend:
+    1. `$ cd frontend`
+    2. `$ pnpm run dev`
 
 ## Troubleshooting
 

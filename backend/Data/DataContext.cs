@@ -1,5 +1,4 @@
-﻿global using Microsoft.EntityFrameworkCore;
-using snake_game.Models;
+﻿using snake_game.Models;
 
 namespace snake_game.Data;
 
