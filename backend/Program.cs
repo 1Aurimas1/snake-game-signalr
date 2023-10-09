@@ -12,6 +12,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.AddTransient<TokenManagerMiddleware>();
+builder.Services.AddTransient<ITokenManager, TokenManager>();
+builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+builder.Services.AddMemoryCache();
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -73,6 +78,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<TokenManagerMiddleware>();
 
 app.MapControllers();
 

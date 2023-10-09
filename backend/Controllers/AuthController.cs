@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -13,12 +14,22 @@ namespace snake_game.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _configuration;
+    private readonly ITokenManager _tokenManager;
     private readonly DataContext _context;
 
-    public AuthController(IConfiguration configuration, DataContext context)
+    public AuthController(IConfiguration configuration, ITokenManager tokenManager, DataContext context)
     {
         _configuration = configuration;
+        _tokenManager = tokenManager;
         _context = context;
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<ActionResult<string>> Logout()
+    {
+        _tokenManager.DeactivateCurrent();
+        return Ok();
     }
 
     [HttpPost("register")]
