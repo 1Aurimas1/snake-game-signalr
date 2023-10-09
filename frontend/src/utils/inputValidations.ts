@@ -78,3 +78,17 @@ export const passwordConfirmationValidation = {
     validate: {},
   },
 };
+
+export const mapNameValidation = {
+  label: "map name",
+  id: "mapName",
+  name: "mapName",
+  type: "text",
+  placeholder: "map name...",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+  },
+};
