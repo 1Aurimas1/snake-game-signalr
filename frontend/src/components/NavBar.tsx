@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
 import { useState } from "react";
 import logo from "../assets/snake_64_bw.png";
 
@@ -9,7 +8,6 @@ const navItems = [
 ];
 
 export const NavBar = () => {
-  const { logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const mappedLinks = (
@@ -26,12 +24,12 @@ export const NavBar = () => {
         </li>
       ))}
       <li className="pt-1">
-        <button
-          onClick={logout}
+        <Link
+          to={"/logout"}
           className="rounded bg-gray-500 px-2 py-1 font-bold text-red-500 hover:bg-gray-200 hover:text-black active:bg-red-500 active:text-black"
         >
           Log out
-        </button>
+        </Link>
       </li>
     </>
   );

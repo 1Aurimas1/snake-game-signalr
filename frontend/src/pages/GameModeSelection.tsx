@@ -18,7 +18,7 @@ const modeSelections: ModeSelection[] = [
 ];
 
 const GameModeSelection = () => {
-  const { user } = useAuth();
+  const { userToken } = useAuth();
   const navigate = useNavigate();
 
   const handleSelection = (
@@ -26,7 +26,7 @@ const GameModeSelection = () => {
     selectedMode: GameMode,
   ) => {
     e.preventDefault();
-    navigate("/play", { state: { selectedMode, user } });
+    navigate("/play", { state: { selectedMode, userToken } });
   };
 
   return (

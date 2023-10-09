@@ -11,13 +11,13 @@ interface ProfileDto {
 }
 
 export const Profile = () => {
-  const { user } = useAuth();
+  const { userToken } = useAuth();
   const [profile, setProfile] = useState<ProfileDto>();
 
   async function getProfileInfo() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
-    if (user) headers.append("Authorization", `Bearer ${user}`);
+    if (userToken) headers.append("Authorization", `Bearer ${userToken}`);
 
     return fetch("/api/profile", {
       method: "GET",

@@ -38,7 +38,7 @@ const GameRoom = () => {
 
   const location = useLocation();
   const selectedMode: GameMode = location.state?.selectedMode;
-  const userToken: string = location.state?.user;
+  const userToken: string = location.state?.userToken;
 
   if (selectedMode == null) {
     return (

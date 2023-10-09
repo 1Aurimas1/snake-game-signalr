@@ -4,11 +4,11 @@ import NavBar from "./NavBar";
 import { useAuth } from "../hooks/useAuth";
 
 export const Layout = () => {
-  const { user } = useAuth();
+  const { userToken } = useAuth();
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      {user && <NavBar />}
+      {userToken && <NavBar />}
       <div className="m-10 flex flex-grow justify-center">
         <Outlet />
       </div>
