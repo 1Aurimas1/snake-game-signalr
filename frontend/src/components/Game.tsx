@@ -2,25 +2,26 @@ import { useState } from "react";
 import { GameDto, Point } from "../shared/interfaces/GameDto";
 
 interface Props {
-  grid: Grid;
+  grid: GridDimensions;
   state: GameDto;
   isControllable: boolean;
 }
 
-interface Grid {
+export interface GridDimensions {
   rows: number;
   columns: number;
 }
 
-const CellType = {
-  SNAKE_HEAD: 0,
-  SNAKE_BODY: 1,
-  FOOD: 2,
-  NONE: 3,
+export const CellType = {
+  EMPTY: 0,
+  SNAKE_HEAD: 1,
+  SNAKE_BODY: 2,
+  FOOD: 3,
+  OBSTACLE: 4,
 } as const;
-type CellType = (typeof CellType)[keyof typeof CellType];
+export type CellType = (typeof CellType)[keyof typeof CellType];
 
-const paintCell = (cell: CellType): string => {
+export const paintCell = (cell: number): string => {
   let cellColor;
 
   if (cell === CellType.SNAKE_BODY) {
@@ -29,6 +30,8 @@ const paintCell = (cell: CellType): string => {
     cellColor = "bg-black";
   } else if (cell === CellType.FOOD) {
     cellColor = "bg-red-500";
+  } else if (cell === CellType.OBSTACLE) {
+    cellColor = "bg-gray-700";
   } else {
     cellColor = "bg-gray-200";
   }
@@ -37,7 +40,7 @@ const paintCell = (cell: CellType): string => {
 };
 
 const Game = (props: Props) => {
-  const grid: Grid = props.grid;
+  const grid: GridDimensions = props.grid;
   const isControllable = props.isControllable;
 
   const gameState: GameDto = props.state;
@@ -53,7 +56,7 @@ const Game = (props: Props) => {
   }
 
   const determineCellType = (x: number, y: number) => {
-    let cell: CellType = CellType.NONE;
+    let cell: CellType = CellType.EMPTY;
 
     for (let i = 0; i < snake.length; i++) {
       const isSnake = snake[i].x === x && snake[i].y === y;

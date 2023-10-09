@@ -96,7 +96,7 @@ export const Register = () => {
         <Input {...emailValidation} serverError={serverErrors} />
         <Input {...passwordValidation} serverError={serverErrors} />
         <Input {...passwordConfirmationValidation} serverError={serverErrors} />
-        <Button onClick={onSubmit} text="Register" />
+        <Button onClick={onSubmit} >Register</Button>
         <p>
           Have an account?&nbsp;
           <Link

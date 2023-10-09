@@ -1,7 +1,7 @@
 interface Props {
   onClick: React.MouseEventHandler<HTMLButtonElement> | undefined;
   className?: string;
-  text: string;
+  children: string;
 }
 
 export const Button = (props: Props) => {
@@ -10,7 +10,7 @@ export const Button = (props: Props) => {
       onClick={props.onClick}
       className={`w-28 rounded bg-gray-500 py-2 text-white hover:bg-gray-200 hover:text-black active:bg-red-500 active:text-black ${props.className}`}
     >
-      {props.text}
+      {props.children}
     </button>
   );
 };

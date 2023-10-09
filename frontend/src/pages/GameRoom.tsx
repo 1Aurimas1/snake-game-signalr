@@ -11,7 +11,7 @@ import Game from "../components/Game";
 import Spinner from "../components/Spinner";
 import ErrorComponent from "../components/ErrorComponent";
 
-interface Grid {
+export interface Grid {
   rows: number;
   columns: number;
 }

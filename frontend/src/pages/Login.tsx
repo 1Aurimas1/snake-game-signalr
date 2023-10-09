@@ -101,7 +101,7 @@ export const Login = () => {
         >
           <Input {...usernameValidation} serverError={serverErrors} />
           <Input {...passwordValidation} serverError={serverErrors} />
-          <Button onClick={onSubmit} text="Log In" />
+          <Button onClick={onSubmit} >Log In</Button>
         </form>
       </FormProvider>
       <p>
