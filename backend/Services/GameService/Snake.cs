@@ -1,8 +1,8 @@
 class Snake
 {
     private readonly byte _initSize;
-    private List<Point> _parts;
-    private Point _movePos;
+    private List<Vector2> _parts;
+    private Vector2 _movePos;
 
     public int Growth { get => _parts.Count - _initSize; }
 
@@ -10,9 +10,9 @@ class Snake
     {
         _initSize = 3;
 
-        _parts = new List<Point>();
+        _parts = new List<Vector2>();
         for (int i = _initSize - 1; i >= 0; i--)
-            _parts.Add(new Point(i, 0));
+            _parts.Add(new Vector2(i, 0));
 
         _movePos = _parts.Last() + MovePositions.Get(Direction.Right);
     }
@@ -48,17 +48,17 @@ class Snake
         return _parts.Count;
     }
 
-    public List<Point> Parts()
+    public List<Vector2> Parts()
     {
         return _parts;
     }
 
-    public Point NextHeadPosition()
+    public Vector2 NextHeadPosition()
     {
         return _parts[0] + _movePos;
     }
 
-    public bool IsColliding(Point p)
+    public bool IsColliding(Vector2 p)
     {
         return _parts.Contains(p);
     }

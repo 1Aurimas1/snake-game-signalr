@@ -7,7 +7,7 @@ enum GameStatus
 
 class Game
 {
-    private Point _food;
+    private Vector2 _food;
 
     private bool _toUpdateFood;
 
@@ -39,7 +39,7 @@ class Game
         if (Status != GameStatus.Running) return;
         ResetUpdateChecks();
 
-        Point nextPos = Snake.NextHeadPosition();
+        Vector2 nextPos = Snake.NextHeadPosition();
         if (IsColliding(nextPos))
         {
             Status = GameStatus.Finished;
@@ -76,14 +76,14 @@ class Game
         };
     }
 
-    private bool IsColliding(Point p)
+    private bool IsColliding(Vector2 p)
     {
         return !Grid.IsWithinBoundaries(p) || Snake.IsColliding(p);
     }
 
-    private Point SpawnFood()
+    private Vector2 SpawnFood()
     {
-        Point[] emptyCells = FindEmptyCells();
+        Vector2[] emptyCells = FindEmptyCells();
 
         Random rnd = new Random();
         int idx = rnd.Next(0, emptyCells.Length);
@@ -91,16 +91,16 @@ class Game
         return emptyCells[idx];
     }
 
-    private Point[] FindEmptyCells()
+    private Vector2[] FindEmptyCells()
     {
-        Point[] emptyCells = new Point[Grid.Size - Snake.Length()];
+        Vector2[] emptyCells = new Vector2[Grid.Size - Snake.Length()];
 
         int idx = 0;
         for (int i = 0; i < Grid.Rows; i++)
         {
             for (int j = 0; j < Grid.Cols; j++)
             {
-                Point cell = new Point(i, j);
+                Vector2 cell = new Vector2(i, j);
                 if (!Snake.IsColliding(cell))
                 {
                     emptyCells[idx++] = cell;

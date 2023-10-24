@@ -9,7 +9,7 @@ static class Grid
         Size = Rows * Cols;
     }
 
-    public static bool IsWithinBoundaries(Point point)
+    public static bool IsWithinBoundaries(Vector2 point)
     {
         return (point.X < 0 || point.X >= Cols ||
                 point.Y < 0 || point.Y >= Rows) ?
