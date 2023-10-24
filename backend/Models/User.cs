@@ -1,38 +1,56 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
-
 namespace snake_game.Models;
+
+public enum UserType
+{
+    Basic,
+    Admin,
+}
 
 public class User
 {
     public int Id { get; set; }
-    [Required]
-    [JsonPropertyName("username")]
-    [MaxLength(20, ErrorMessage = "Username should not exceed 20 characters")]
     public string Username { get; set; }
-    [Required]
-    [JsonPropertyName("email")]
-    [EmailAddress(ErrorMessage = "Invalid email address")]
     public string Email { get; set; }
-    [Required]
-    [JsonPropertyName("password")]
-    [MinLength(6, ErrorMessage = "Password should contain atleast 6 characters")]
     public string PasswordHash { get; set; }
-    [Required]
-    [JsonPropertyName("profile")]
-    public Profile Profile { get; set; } = new Profile();
+    public UserType UserType { get; set; }
 
-    public User()
+    public List<Participation> Participations { get; set; } = new();
+}
+
+public record UserDto(int Id, string Username);
+
+public class BaseUserDto
+{
+    public string Username { get; set; }
+    public string Email { get; set; }
+}
+
+public class RegisterUserDto : BaseUserDto
+{
+    public string Password { get; set; }
+    public string PasswordConfirmation { get; set; }
+}
+
+public class UpdateUserDto : BaseUserDto { }
+
+public static class UserMapper
+{
+    public static UserDto ToDto(this User user) => new UserDto(user.Id, user.Username);
+
+    public static User FromRegisterDto(this RegisterUserDto dto)
     {
-        Username = string.Empty;
-        Email = string.Empty;
-        PasswordHash = string.Empty;
+        return new User
+        {
+            Username = dto.Username,
+            Email = dto.Email,
+            PasswordHash = dto.Password,
+            UserType = UserType.Basic,
+        };
     }
 
-    public User(UserRegisterDto user)
+    public static void UpdateWithDto(this User user, UpdateUserDto dto)
     {
-        Username = user.Username;
-        Email = user.Email;
-        PasswordHash = user.Password;
+        user.Username = dto.Username;
+        user.Email = dto.Email;
     }
 }
