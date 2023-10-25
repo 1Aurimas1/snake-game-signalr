@@ -1,52 +1,75 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 public static class JsonResponseGenerator
 {
-    public static string GenerateFluentErrorResponse(
+    public static IEnumerable<CustomError> GenerateFluentErrorResponse(
         List<FluentValidation.Results.ValidationFailure> validationFailures
     )
     {
         var errors = validationFailures.Select(
-            x => new CustomErrorResponse(x.PropertyName, x.ErrorCode, x.ErrorMessage)
+            x => new CustomError(x.PropertyName, x.ErrorCode, x.ErrorMessage)
         );
 
-        var responseResult = JsonSerializer.Serialize(errors);
-        return responseResult;
+        return errors;
     }
 
-    public static string GenerateModelErrorResponse(ModelStateDictionary modelDictionary)
+    public static IEnumerable<IEnumerable<CustomError>> GenerateModelErrorResponse(ModelStateDictionary modelDictionary)
     {
         var errors = modelDictionary.Values.Select(
-            v => v.Errors.Select(e => new CustomErrorResponse("", "", e.ErrorMessage))
+            v => v.Errors.Select(e => new CustomError("", "", e.ErrorMessage))
         );
 
-        var responseResult = JsonSerializer.Serialize(errors);
-        return responseResult;
+        return errors;
     }
 
-    public static string GenerateNotFoundResponse(string propertyName)
+    public static CustomError GenerateNotFoundResponse(string propertyName)
     {
-        var error = new CustomErrorResponse(
+        var error = new CustomError(
             propertyName,
             "Not found",
             $"Resource '{propertyName}' not found"
         );
 
-        var responseResult = JsonSerializer.Serialize(error);
-        return responseResult;
+        return error;
     }
 
-    public static string GenerateUnprocessableEntityResponse(
+    public static CustomError GenerateUnprocessableEntityResponse(
         string propertyName,
         string errorMessage
     )
     {
-        var error = new CustomErrorResponse(propertyName, "Unprocessable entity", errorMessage);
+        var error = new CustomError(propertyName, "Unprocessable entity", errorMessage);
 
-        var responseResult = JsonSerializer.Serialize(error);
-        return responseResult;
+        return error;
+    }
+
+    public static CustomError GenerateExceptionResponse(string exception, string exceptionMessage)
+    {
+        string propertyName = GetPropertyName(exceptionMessage);
+
+        string errorMessage =
+            propertyName == string.Empty
+                ? exceptionMessage
+                : $"Invalid '{propertyName}' field value";
+        var error = new CustomError(propertyName, exception, errorMessage);
+
+        return error;
+    }
+
+    private static string GetPropertyName(string message)
+    {
+        string propertyName = string.Empty;
+
+        int start = message.IndexOf("$.");
+        if (start > 0)
+        {
+            start += 2;
+            int end = message.IndexOf(" ", start);
+            propertyName = message.Substring(start, end - start);
+        }
+
+        return propertyName;
     }
 }
 
-public record CustomErrorResponse(string PropertyName, string ErrorCode, string ErrorMessage);
+public record CustomError(string PropertyName, string ErrorCode, string ErrorMessage);

@@ -25,7 +25,7 @@ public class BaseUserDto
     public string Email { get; set; }
 }
 
-public class RegisterUserDto : BaseUserDto
+public class CreateUserDto : BaseUserDto
 {
     public string Password { get; set; }
     public string PasswordConfirmation { get; set; }
@@ -37,7 +37,7 @@ public static class UserMapper
 {
     public static UserDto ToDto(this User user) => new UserDto(user.Id, user.Username);
 
-    public static User FromRegisterDto(this RegisterUserDto dto)
+    public static User FromCreateDto(this CreateUserDto dto)
     {
         return new User
         {
