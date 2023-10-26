@@ -5,6 +5,7 @@ public class Map
     public int Id { get; set; }
     public string Name { get; set; }
     public double Rating { get; set; } = 0;
+    public bool IsPublished { get; set; }
 
     public List<MapRating> MapRatings { get; set; }
     public User Creator { get; set; }
@@ -44,6 +45,7 @@ public static class MapMapper
         {
             Name = dto.Name,
             MapObstacles = mapObstacles,
+            IsPublished = false,
             Creator = creator,
         };
     }

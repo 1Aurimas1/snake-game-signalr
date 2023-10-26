@@ -95,6 +95,39 @@ namespace snake_game.Migrations
                     b.ToTable("Points");
                 });
 
+            modelBuilder.Entity("snake_game.Models.Game", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CreatorId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MapId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("MapId");
+
+                    b.ToTable("Games");
+                });
+
             modelBuilder.Entity("snake_game.Models.Map", b =>
                 {
                     b.Property<int>("Id")
@@ -105,6 +138,9 @@ namespace snake_game.Migrations
 
                     b.Property<int>("CreatorId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -233,6 +269,9 @@ namespace snake_game.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("GameId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -248,6 +287,8 @@ namespace snake_game.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("GameId");
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -298,6 +339,25 @@ namespace snake_game.Migrations
                     b.HasOne("snake_game.Models.Obstacle", null)
                         .WithMany("Points")
                         .HasForeignKey("ObstacleId");
+                });
+
+            modelBuilder.Entity("snake_game.Models.Game", b =>
+                {
+                    b.HasOne("snake_game.Models.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("snake_game.Models.Map", "Map")
+                        .WithMany()
+                        .HasForeignKey("MapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Map");
                 });
 
             modelBuilder.Entity("snake_game.Models.Map", b =>
@@ -366,6 +426,18 @@ namespace snake_game.Migrations
                         .IsRequired();
 
                     b.Navigation("Organizer");
+                });
+
+            modelBuilder.Entity("snake_game.Models.User", b =>
+                {
+                    b.HasOne("snake_game.Models.Game", null)
+                        .WithMany("Players")
+                        .HasForeignKey("GameId");
+                });
+
+            modelBuilder.Entity("snake_game.Models.Game", b =>
+                {
+                    b.Navigation("Players");
                 });
 
             modelBuilder.Entity("snake_game.Models.Map", b =>

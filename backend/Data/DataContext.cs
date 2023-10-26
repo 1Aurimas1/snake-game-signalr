@@ -12,6 +12,7 @@ public class DataContext : DbContext
     public DbSet<MapObstacle> MapObstacles { get; set; }
     public DbSet<Obstacle> Obstacles { get; set; }
     public DbSet<Point> Points { get; set; }
+    public DbSet<Game> Games { get; set; }
 
     public DataContext(DbContextOptions<DataContext> options)
         : base(options) { }
