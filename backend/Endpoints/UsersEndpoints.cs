@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 using snake_game.Models;
 
 public static class UsersEndpoints
@@ -23,7 +24,7 @@ public static class UsersEndpoints
 
     public static async Task<IResult> Get(int id, DataContext dbContext)
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == id);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
@@ -43,7 +44,10 @@ public static class UsersEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = dto.FromCreateDto();
+        var hasher = new PasswordHasher<CreateUserDto>();
+        string passwordHash = hasher.HashPassword(dto, dto.Password);
+
+        var user = dto.FromCreateDto(passwordHash);
         dbContext.Users.Add(user);
 
         await dbContext.SaveChangesAsync();
@@ -65,7 +69,7 @@ public static class UsersEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == id);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
@@ -78,7 +82,7 @@ public static class UsersEndpoints
 
     public static async Task<IResult> Remove(int id, DataContext dbContext)
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == id);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 

@@ -19,6 +19,8 @@ public class User
 
 public record UserDto(int Id, string Username);
 
+public record LoginUserDto(string Username, string Password);
+
 public class BaseUserDto
 {
     public string Username { get; set; }
@@ -37,20 +39,31 @@ public static class UserMapper
 {
     public static UserDto ToDto(this User user) => new UserDto(user.Id, user.Username);
 
-    public static User FromCreateDto(this CreateUserDto dto)
+    public static User FromCreateDto(this CreateUserDto dto, string passwordHash)
     {
         return new User
         {
             Username = dto.Username,
             Email = dto.Email,
-            PasswordHash = dto.Password,
+            PasswordHash = passwordHash,
             UserType = UserType.Basic,
         };
     }
 
     public static void UpdateWithDto(this User user, UpdateUserDto dto)
     {
-        user.Username = dto.Username;
-        user.Email = dto.Email;
+        if (!string.IsNullOrEmpty(dto.Username) && string.IsNullOrEmpty(dto.Email))
+        {
+            user.Username = dto.Username;
+        }
+        else if (string.IsNullOrEmpty(dto.Username) && !string.IsNullOrEmpty(dto.Email))
+        {
+            user.Email = dto.Email;
+        }
+        else
+        {
+            user.Username = dto.Username;
+            user.Email = dto.Email;
+        }
     }
 }
