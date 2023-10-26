@@ -5,7 +5,7 @@ public class CreateTournamentDtoValidator : AbstractValidator<CreateTournamentDt
 {
     public CreateTournamentDtoValidator(DataContext dbContext)
     {
-        RuleFor(x => x.Name).NotEmpty().Length(2, 100);
+        RuleFor(x => x.Name).NotEmpty().Length(2, 30);
         RuleFor(x => x.Rounds).NotEmpty();
         RuleForEach(x => x.Rounds).SetValidator(new CreateRoundDtoValidator(dbContext));
         RuleFor(x => x.MaxParticipants).NotEmpty().GreaterThan(1);

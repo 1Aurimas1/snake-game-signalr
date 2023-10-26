@@ -5,12 +5,18 @@ public static class TournamentsEndpoints
 {
     public static RouteGroupBuilder MapTournamentsApi(this RouteGroupBuilder group)
     {
-        group.MapGet("/tournaments", GetMany);
-        group.MapGet("/users/{userId}/tournaments", GetManyByUser);
+        // Tournaments
+        group.MapGet("/tournaments", GetAll);
+        group.MapGet("/users/{userId}/tournaments", GetMany);
         group.MapGet("/users/{userId}/tournaments/{id}", Get);
-        group.MapPost("/tournaments", Create);
-        group.MapPatch("/tournaments/{id}", Update);
-        group.MapDelete("/tournaments/{id}", Remove);
+        group.MapPost("/users/{userId}/tournaments", Create);
+        group.MapPatch("/users/{userId}/tournaments/{id}", Update);
+        group.MapDelete("/users/{userId}/tournaments/{id}", Remove);
+        // Rounds
+        group.MapGet(
+            "/users/{userId}/tournaments/{tournamentId}/rounds",
+            GetManyRoundsByUserByTournament
+        );
 
         return group;
     }
@@ -26,9 +32,9 @@ public static class TournamentsEndpoints
             .AsQueryable();
     }
 
-    // All users endpoints
+    // Nonspecific endpoints
 
-    public static async Task<IResult> GetMany(DataContext dbContext)
+    public static async Task<IResult> GetAll(DataContext dbContext)
     {
         var tournaments = await GetCompleteQuery(dbContext).ToListAsync();
 
@@ -37,9 +43,9 @@ public static class TournamentsEndpoints
 
     // Specific user endpoints
 
-    public static async Task<IResult> GetManyByUser(int userId, DataContext dbContext)
+    public static async Task<IResult> GetMany(int userId, DataContext dbContext)
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
@@ -52,12 +58,12 @@ public static class TournamentsEndpoints
 
     public static async Task<IResult> Get(int userId, int id, DataContext dbContext)
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         var tournament = await GetCompleteQuery(dbContext)
-            .SingleOrDefaultAsync(x => x.Id == id && x.Organizer.Id == userId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.Organizer.Id == userId);
 
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
@@ -65,18 +71,23 @@ public static class TournamentsEndpoints
         return Results.Ok(tournament.ToDto());
     }
 
-    public static async Task<IResult> Create(int userId, CreateTournamentDto dto, IValidator<CreateTournamentDto> validator, DataContext dbContext)
+    public static async Task<IResult> Create(
+        int userId,
+        CreateTournamentDto dto,
+        IValidator<CreateTournamentDto> validator,
+        DataContext dbContext
+    )
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId);
-        if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
-
         var result = await validator.ValidateAsync(dto);
         if (!result.IsValid)
         {
             var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
             return Results.UnprocessableEntity(responseResult);
         }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         var tournament = dto.FromCreateDto(user);
         dbContext.Tournaments.Add(tournament);
@@ -94,10 +105,6 @@ public static class TournamentsEndpoints
         DataContext dbContext
     )
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId);
-        if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
-
         var result = await validator.ValidateAsync(dto);
         if (!result.IsValid)
         {
@@ -105,7 +112,12 @@ public static class TournamentsEndpoints
             return Results.UnprocessableEntity(response);
         }
 
-        var tournament = await GetCompleteQuery(dbContext).SingleOrDefaultAsync(x => x.Id == id);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+
+        var tournament = await GetCompleteQuery(dbContext)
+            .FirstOrDefaultAsync(x => x.Id == id && x.Organizer.Id == userId);
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
@@ -117,7 +129,7 @@ public static class TournamentsEndpoints
                 )
             );
 
-        var participant = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == dto.ParticipantId);
+        var participant = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == dto.ParticipantId);
         if (participant == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("participant"));
 
@@ -125,7 +137,7 @@ public static class TournamentsEndpoints
             return Results.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "user",
-                    "This user already registered for tournament"
+                    "This user is already registered for tournament"
                 )
             );
 
@@ -140,11 +152,13 @@ public static class TournamentsEndpoints
 
     public static async Task<IResult> Remove(int userId, int id, DataContext dbContext)
     {
-        var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId);
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments.SingleOrDefaultAsync(x => x.Id == id);
+        var tournament = await dbContext.Tournaments.FirstOrDefaultAsync(
+            x => x.Id == id && x.Organizer.Id == userId
+        );
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
@@ -152,5 +166,28 @@ public static class TournamentsEndpoints
         await dbContext.SaveChangesAsync();
 
         return Results.NoContent();
+    }
+
+    public static async Task<IResult> GetManyRoundsByUserByTournament(
+        int userId,
+        int tournamentId,
+        DataContext dbContext
+    )
+    {
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+
+        var tournament = await dbContext.Tournaments.FirstOrDefaultAsync(
+            x => x.Id == tournamentId && x.Organizer.Id == userId
+        );
+        if (tournament == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
+
+        var rounds = await dbContext.Rounds
+            .Where(x => x.TournamentId == tournamentId)
+            .ToListAsync();
+
+        return Results.Ok(rounds.Select(x => x.ToDto()));
     }
 }

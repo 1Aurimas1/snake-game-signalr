@@ -89,8 +89,7 @@ app.UseExceptionHandler(
             {
                 context.Response.StatusCode = exception.GetBaseException() switch
                 {
-                    FormatException => 422,
-                    InvalidOperationException => 422,
+                    FormatException or InvalidOperationException => 422,
                     _ => 400
                 };
 
@@ -113,10 +112,12 @@ app.UseExceptionHandler(
         })
 );
 
-var rootGroup = app.MapGroup("/api");
-rootGroup.MapMapsApi();
+var rootGroup = app.MapGroup("/api/v1");
+rootGroup.MapAuthApi();
 rootGroup.MapUsersApi();
 rootGroup.MapTournamentsApi();
+rootGroup.MapMapsApi();
+rootGroup.MapGamesApi();
 
 //// Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
@@ -125,14 +126,14 @@ rootGroup.MapTournamentsApi();
 //    app.UseSwaggerUI();
 //}
 //
-//using (var scope = app.Services.CreateScope())
-//{
-//    var services = scope.ServiceProvider;
-//
-//    var context = services.GetRequiredService<DataContext>();
-//    context.Database.EnsureCreated();
-//    new DbInitializer(context);
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    var context = services.GetRequiredService<DataContext>();
+    context.Database.EnsureCreated();
+    new DbInitializer(context);
+}
 //
 //app.UseHttpsRedirection();
 //
