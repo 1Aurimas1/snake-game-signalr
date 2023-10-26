@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
+namespace snake_game.Services.GameService;
+
 [Authorize]
 public class GameHub : Hub<IGameClient>
 {

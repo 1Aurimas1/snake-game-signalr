@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 
+namespace snake_game.Services.GameService;
+
 public class GameManager
 {
     private readonly IHubContext<GameHub, IGameClient> _hubContext;

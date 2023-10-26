@@ -1,3 +1,5 @@
+namespace snake_game.Services.GameService;
+
 enum GameRoomStatus
 {
     OpenToJoin,
