@@ -9,6 +9,7 @@ public class DataContext : DbContext
     public DbSet<Participation> Participations { get; set; }
     public DbSet<Round> Rounds { get; set; }
     public DbSet<Map> Maps { get; set; }
+    public DbSet<MapRating> MapRatings { get; set; }
     public DbSet<MapObstacle> MapObstacles { get; set; }
     public DbSet<Obstacle> Obstacles { get; set; }
     public DbSet<Point> Points { get; set; }
