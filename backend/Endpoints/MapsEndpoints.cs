@@ -51,6 +51,12 @@ public static class MapsEndpoints
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
+        if (map.IsPublished)
+        {
+            var responseResult = JsonResponseGenerator.GenerateUnprocessableEntityResponse("mapId", "Map is already published");
+            return Results.UnprocessableEntity(responseResult);
+        }
+
         map.IsPublished = true;
 
         await dbContext.SaveChangesAsync();
