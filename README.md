@@ -1,3 +1,19 @@
+## Projekto užduotis
+
+Projekto tikslas – suteikti galimybę kompiuterinių žaidimų žaidėjams pasivaržyti tarpusavyje bei 
+smagiai praleisti laiką. 
+Aplikacijos veikimo principas – internetinė svetainė susidės iš dviejų dalių:  
+- klientinės dalies (angl. Front-end), kuri žaidėjams ar administratoriams bus pasiekiama per 
+naršyklę. 
+- serverinės dalies (angl. Back-end), kuri teiks API (angl. application programming interface) 
+prieigą prie žaidimų, naudotojų valdymo. 
+
+Naudotojas, prieš pradėdamas naudotis šia aplikacija, turės susikurt naują paskyrą ir su ja 
+prisijungt. Prisijungęs galės peržiūrėti sužaistų žaidimų bendras statistikas, pasirinkti žaidimo 
+režimą ir pradėti žaidimo paiešką, prisijungti prie vyksiančių turnyrų, kurti bei reitinguoti žaidimo 
+žemėlapius. Administratorius galės sukurti naujus turnyrus, patvirtins sukurtus žemėlapius prieš juos 
+paskelbiant visiems žaidėjams.
+
 # Snake game
 
 Multiplayer snake game that utilizes SignalR for real-time communication and JWT for player authentication.
