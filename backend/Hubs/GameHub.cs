@@ -15,17 +15,18 @@ public class GameHub : Hub<IGameClient>
 
     public async Task<string> JoinGame(string playerName, GameMode gameMode)
     {
-        return _gameManager.JoinGameRoom(Context.ConnectionId, playerName, gameMode);
+        return await _gameManager.JoinGameRoom(Context.ConnectionId, playerName, gameMode);
     }
 
     public async Task<Tuple<int, int>> InitGrid()
     {
-        return new Tuple<int, int>(Grid.Rows, Grid.Cols);
+        return await Task.Run(() => new Tuple<int, int>(Grid.Rows, Grid.Cols));
     }
 
     public async Task SendInput(string gameRoomId, string playerName, Direction direction)
     {
-        _gameManager.UpdatePlayerMovePosition(gameRoomId, playerName, direction);
+        await Task.Run(
+            () => _gameManager.UpdatePlayerMovePosition(gameRoomId, playerName, direction)
+        );
     }
 }
-

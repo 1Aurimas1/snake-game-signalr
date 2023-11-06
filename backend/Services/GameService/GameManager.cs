@@ -55,12 +55,13 @@ public class GameManager
         room.Start();
     }
 
-    public string JoinGameRoom(string connectionId, string playerName, GameMode gameMode)
+    public async Task<string> JoinGameRoom(string connectionId, string playerName, GameMode gameMode)
     {
         var room = FindOrCreateGameRoom(playerName, gameMode);
-
         room.Join(playerName);
-        _hubContext.Groups.AddToGroupAsync(connectionId, room.Id);
+
+        await _hubContext.Groups.AddToGroupAsync(connectionId, room.Id);
+
         return room.Id;
     }
 
