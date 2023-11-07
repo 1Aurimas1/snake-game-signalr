@@ -8,7 +8,6 @@ public static class UsersEndpoints
     {
         group.MapGet("/users", GetMany);
         group.MapGet("/users/{id}", Get);
-        group.MapPost("/users", Create);
         group.MapPatch("/users/{id}", Update);
         group.MapDelete("/users/{id}", Remove);
 
@@ -22,44 +21,20 @@ public static class UsersEndpoints
         return Results.Ok(users.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> Get(int id, DataContext dbContext)
+    public static async Task<IResult> Get(string id, UserManager<User> userManager)
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        var user = await userManager.FindByIdAsync(id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         return Results.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> Create(
-        CreateUserDto dto,
-        IValidator<CreateUserDto> validator,
-        DataContext dbContext
-    )
-    {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(responseResult);
-        }
-
-        var hasher = new PasswordHasher<CreateUserDto>();
-        string passwordHash = hasher.HashPassword(dto, dto.Password);
-
-        var user = dto.FromCreateDto(passwordHash);
-        dbContext.Users.Add(user);
-
-        await dbContext.SaveChangesAsync();
-
-        return Results.Created($"/users/{user.Id}", user.ToDto());
-    }
-
     public static async Task<IResult> Update(
-        int id,
+        string id,
         UpdateUserDto dto,
         IValidator<UpdateUserDto> validator,
-        DataContext dbContext
+        UserManager<User> userManager
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -69,26 +44,28 @@ public static class UsersEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        var user = await userManager.FindByIdAsync(id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         user.UpdateWithDto(dto);
 
-        await dbContext.SaveChangesAsync();
+        var updateResult = await userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+            return Results.UnprocessableEntity("Update error");
 
         return Results.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> Remove(int id, DataContext dbContext)
+    public static async Task<IResult> Remove(string id, UserManager<User> userManager)
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        var user = await userManager.FindByIdAsync(id);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        dbContext.Users.Remove(user);
-
-        await dbContext.SaveChangesAsync();
+        var deleteResult = await userManager.DeleteAsync(user);
+        if (!deleteResult.Succeeded)
+            return Results.UnprocessableEntity("Delete error");
 
         return Results.NoContent();
     }

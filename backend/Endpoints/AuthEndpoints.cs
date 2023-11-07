@@ -10,8 +10,10 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthApi(this RouteGroupBuilder group)
     {
-        group.MapPost("/auth/logout", Logout);
-        group.MapPost("/auth/login", Login);
+        group.MapPost("/register", Register);
+        group.MapPost("/login", Login);
+        group.MapPost("/logout", Logout);
+        group.MapPost("/accessToken", RefreshAccessToken);
 
         return group;
     }
@@ -25,6 +27,32 @@ public static class AuthEndpoints
             .AsQueryable();
     }
 
+    public static async Task<IResult> Register(
+        UserManager<User> userManager,
+        RegisterUserDto dto,
+        IValidator<RegisterUserDto> validator
+    )
+    {
+        var result = await validator.ValidateAsync(dto);
+        if (!result.IsValid)
+        {
+            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
+            return Results.UnprocessableEntity(responseResult);
+        }
+
+        var user = dto.FromRegisterDto();
+
+        var userResult = await userManager.CreateAsync(user, dto.Password);
+        // TODO: userResult.errors
+        if (!userResult.Succeeded)
+            return Results.UnprocessableEntity();
+
+        // TODO: check result
+        await userManager.AddToRoleAsync(user, UserRoles.Basic);
+
+        return Results.Created("/register", user.ToDto());
+    }
+
     public static async Task<IResult> Logout()
     {
         // TODO: implement logout logic
@@ -33,9 +61,10 @@ public static class AuthEndpoints
     }
 
     public static async Task<IResult> Login(
+        UserManager<User> userManager,
         LoginUserDto dto,
         IValidator<LoginUserDto> validator,
-        DataContext dbContext,
+        JwtTokenService jwtTokenService,
         IConfiguration configuration
     )
     {
@@ -46,58 +75,62 @@ public static class AuthEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
+        var user = await userManager.FindByNameAsync(dto.UserName);
         if (user == null)
+            // TODO: unprocessable(username or p was incorect)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var hasher = new PasswordHasher<LoginUserDto>();
-        var verificationResult = hasher.VerifyHashedPassword(dto, user.PasswordHash, dto.Password);
+        var isPasswordValid = await userManager.CheckPasswordAsync(user, dto.Password);
+        if (!isPasswordValid)
+            // TODO: unprocessable(username or p was incorect)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        if (verificationResult == PasswordVerificationResult.Failed)
-        {
-            return Results.Unauthorized();
-        }
-        else if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
-        {
-            System.Console.WriteLine("Deprecated algorithm detected. Starting password rehash...");
+        user.ForceRelogin = false;
+        await userManager.UpdateAsync(user);
 
-            var newHash = hasher.HashPassword(dto, dto.Password);
-            user.PasswordHash = newHash;
+        var roles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtTokenService.CreateAccessToken(
+            user.UserName,
+            user.Id.ToString(),
+            roles
+        );
+        var refreshToken = jwtTokenService.CreateRefreshToken(user.Id.ToString());
 
-            await dbContext.SaveChangesAsync();
-
-            System.Console.WriteLine("Password rehash completed!");
-        }
-
-        string token = CreateToken(user, configuration);
-
-        return Results.Ok(token);
+        return Results.Ok(new SuccessfulLoginDto(accessToken, refreshToken));
     }
 
-    private static string CreateToken(User user, IConfiguration configuration)
+    public static async Task<IResult> RefreshAccessToken(
+        UserManager<User> userManager,
+        JwtTokenService jwtTokenService,
+        RefreshAccessTokenDto dto
+    )
     {
-        var jwtSettings = configuration.GetSection("Jwt");
-
-        var claims = new List<Claim>
+        if (!jwtTokenService.TryParseRefreshToken(dto.RefreshToken, out var claims))
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username)
-        };
+            return Results.UnprocessableEntity();
+        }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
+        var userId = claims.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+        var user = await userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return Results.UnprocessableEntity("Invalid token");
+        }
 
-        var token = new JwtSecurityToken(
-            claims: claims,
-            expires: DateTime.Now.AddDays(1),
-            signingCredentials: creds,
-            issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"]
+        if (user.ForceRelogin)
+        {
+            return Results.UnprocessableEntity();
+        }
+
+        var roles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtTokenService.CreateAccessToken(
+            user.UserName,
+            user.Id.ToString(),
+            roles
         );
+        var refreshToken = jwtTokenService.CreateRefreshToken(user.Id.ToString());
 
-        var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return jwt;
+        return Results.Ok(new SuccessfulLoginDto(accessToken, refreshToken));
     }
 }
