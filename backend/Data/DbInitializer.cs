@@ -1,60 +1,100 @@
-using System.Globalization;
+using Microsoft.AspNetCore.Identity;
 using snake_game.Models;
 
 public class DbInitializer
 {
     private readonly DataContext _context;
+    private readonly UserManager<User> _userManager;
+    private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-    public DbInitializer(DataContext context)
+    public DbInitializer(
+        DataContext context,
+        UserManager<User> userManager,
+        RoleManager<IdentityRole<int>> roleManager
+    )
     {
         _context = context;
-
-        SeedObstaclesIfEmpty();
-        SeedUsersIfEmpty();
-        SeedMapsIfEmpty();
-        SeedTournamentsIfEmpty();
+        _userManager = userManager;
+        _roleManager = roleManager;
     }
 
-    private void SeedUsersIfEmpty()
+    public async Task SeedAsync()
     {
-        if (_context.Users.Any())
+        await AddDefaultRoles();
+        await AddAdminUser();
+
+        //await SeedObstaclesIfEmpty();
+        ////SeedAuth();
+        ////SeedUsersIfEmpty();
+        //await SeedMapsIfEmpty();
+        //await SeedTournamentsIfEmpty();
+    }
+
+    private async Task AddDefaultRoles()
+    {
+        foreach (var role in UserRoles.All)
+        {
+            var roleExists = await _roleManager.RoleExistsAsync(role);
+            if (!roleExists)
+                await _roleManager.CreateAsync(new IdentityRole<int>(role));
+        }
+    }
+
+    private async Task AddAdminUser()
+    {
+        var newAdminUser = new User { UserName = "admin", Email = "admin@email.com" };
+
+        var existingAdminUser = await _userManager.FindByNameAsync(newAdminUser.UserName);
+        if (existingAdminUser == null)
+        {
+            var createAdminUserResult = await _userManager.CreateAsync(
+                newAdminUser,
+                "Pa55word!"
+            );
+            if (createAdminUserResult.Succeeded)
+            {
+                await _userManager.AddToRolesAsync(newAdminUser, UserRoles.All);
+            }
+        }
+    }
+
+    private async Task SeedUsersIfEmpty()
+    {
+        if (await _context.Users.AnyAsync())
             return;
 
         var initialUsers = new[]
         {
             new User
             {
-                Username = "naudotojas1",
+                UserName = "naudotojas1",
                 Email = "email1@email.com",
                 PasswordHash = "passHash",
-                UserType = UserType.Basic
             },
             new User
             {
-                Username = "naudotojas2",
+                UserName = "naudotojas2",
                 Email = "email2@email.com",
                 PasswordHash = "passHash",
-                UserType = UserType.Basic
             },
             new User
             {
-                Username = "admin1",
+                UserName = "admin1",
                 Email = "email3@email.com",
                 PasswordHash = "passHash",
-                UserType = UserType.Admin
             },
         };
 
-        _context.Users.AddRange(initialUsers);
-        _context.SaveChanges();
+        await _context.Users.AddRangeAsync(initialUsers);
+        await _context.SaveChangesAsync();
     }
 
-    private void SeedMapsIfEmpty()
+    private async Task SeedMapsIfEmpty()
     {
-        if (_context.Maps.Any())
+        if (await _context.Maps.AnyAsync())
             return;
 
-        var users = _context.Users.ToList();
+        var users = await _context.Users.ToListAsync();
 
         var initialMaps = new[]
         {
@@ -169,33 +209,37 @@ public class DbInitializer
         };
         initialMaps[1].MapRatings = MapRatingsForMap2;
 
-        _context.Maps.AddRange(initialMaps);
-        _context.SaveChanges();
+        await _context.Maps.AddRangeAsync(initialMaps);
+        await _context.SaveChangesAsync();
     }
 
-    private void SeedTournamentsIfEmpty()
+    private async Task SeedTournamentsIfEmpty()
     {
-        if (_context.Tournaments.Any())
+        if (await _context.Tournaments.AnyAsync())
             return;
 
-        var users = _context.Users.ToList();
-        var maps = _context.Maps.ToList();
+        var users = await _context.Users.ToListAsync();
+        var maps = await _context.Maps.ToListAsync();
 
         var initialTournaments = new[]
         {
             new Tournament
             {
                 Name = "naudotojo3_turnyras1",
-                StartTime = DateTime.ParseExact(
-                    "2024-05-01T08:30:52Z",
-                    "yyyy-MM-ddTHH:mm:ssZ",
-                    System.Globalization.CultureInfo.InvariantCulture
-                ).ToUniversalTime(),
-                EndTime = DateTime.ParseExact(
-                    "2024-05-01T09:30:52Z",
-                    "yyyy-MM-ddTHH:mm:ssZ",
-                    System.Globalization.CultureInfo.InvariantCulture
-                ).ToUniversalTime(),
+                StartTime = DateTime
+                    .ParseExact(
+                        "2024-05-01T08:30:52Z",
+                        "yyyy-MM-ddTHH:mm:ssZ",
+                        System.Globalization.CultureInfo.InvariantCulture
+                    )
+                    .ToUniversalTime(),
+                EndTime = DateTime
+                    .ParseExact(
+                        "2024-05-01T09:30:52Z",
+                        "yyyy-MM-ddTHH:mm:ssZ",
+                        System.Globalization.CultureInfo.InvariantCulture
+                    )
+                    .ToUniversalTime(),
                 CurrentRound = 1,
                 MaxParticipants = 2,
                 Organizer = users[2],
@@ -203,16 +247,20 @@ public class DbInitializer
             new Tournament
             {
                 Name = "naudotojo3_turnyras2",
-                StartTime = DateTime.ParseExact(
-                    "2024-05-01T10:30:52Z",
-                    "yyyy-MM-ddTHH:mm:ssZ",
-                    System.Globalization.CultureInfo.InvariantCulture
-                ).ToUniversalTime(),
-                EndTime = DateTime.ParseExact(
-                    "2024-05-01T11:30:52Z",
-                    "yyyy-MM-ddTHH:mm:ssZ",
-                    System.Globalization.CultureInfo.InvariantCulture
-                ).ToUniversalTime(),
+                StartTime = DateTime
+                    .ParseExact(
+                        "2024-05-01T10:30:52Z",
+                        "yyyy-MM-ddTHH:mm:ssZ",
+                        System.Globalization.CultureInfo.InvariantCulture
+                    )
+                    .ToUniversalTime(),
+                EndTime = DateTime
+                    .ParseExact(
+                        "2024-05-01T11:30:52Z",
+                        "yyyy-MM-ddTHH:mm:ssZ",
+                        System.Globalization.CultureInfo.InvariantCulture
+                    )
+                    .ToUniversalTime(),
                 CurrentRound = 1,
                 MaxParticipants = 2,
                 Organizer = users[2],
@@ -260,13 +308,13 @@ public class DbInitializer
         };
         initialTournaments[1].Participations = ParticipationsForTournament2;
 
-        _context.Tournaments.AddRange(initialTournaments);
-        _context.SaveChanges();
+        await _context.Tournaments.AddRangeAsync(initialTournaments);
+        await _context.SaveChangesAsync();
     }
 
-    private void SeedObstaclesIfEmpty()
+    private async Task SeedObstaclesIfEmpty()
     {
-        if (_context.Obstacles.Any())
+        if (await _context.Obstacles.AnyAsync())
             return;
 
         var initialObstacles = new[]
@@ -301,7 +349,7 @@ public class DbInitializer
             }
         };
 
-        _context.Obstacles.AddRange(initialObstacles);
-        _context.SaveChanges();
+        await _context.Obstacles.AddRangeAsync(initialObstacles);
+        await _context.SaveChangesAsync();
     }
 }

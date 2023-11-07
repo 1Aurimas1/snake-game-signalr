@@ -1,7 +1,15 @@
 global using Microsoft.EntityFrameworkCore;
 global using snake_game.Data;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using snake_game.Models;
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,68 +21,59 @@ builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(connecti
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+builder.Services.AddTransient<JwtTokenService>();
+builder.Services.AddScoped<DbInitializer>();
+
+builder.Services
+    .AddIdentity<User, IdentityRole<int>>()
+    .AddEntityFrameworkStores<DataContext>()
+    .AddDefaultTokenProviders();
+
 //builder.Services.AddTransient<TokenManagerMiddleware>();
 //builder.Services.AddTransient<ITokenManager, TokenManager>();
 //builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 //builder.Services.AddMemoryCache();
 //
-//builder.Services
-//    .AddAuthentication(options =>
-//    {
-//        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-//        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-//        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-//    })
-//    .AddJwtBearer(options =>
-//    {
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-//            ValidAudience = builder.Configuration["Jwt:Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(
-//                Encoding.UTF8.GetBytes(builder.Configuration.GetSection("Jwt:Key").Value!)
-//            ),
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//        };
-//
-//        options.Events = new JwtBearerEvents
-//        {
-//            OnMessageReceived = context =>
-//            {
-//                var accessToken = context.Request.Query["access_token"];
-//
-//                var path = context.HttpContext.Request.Path;
-//                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/gamehub")))
-//                {
-//                    context.Token = accessToken;
-//                }
-//                return Task.CompletedTask;
-//            }
-//        };
-//    });
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
+            ValidAudience = builder.Configuration["Jwt:ValidAudience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
+            ),
+            //ValidateIssuer = true,
+            //ValidateAudience = true,
+            //ValidateLifetime = true,
+            //ValidateIssuerSigningKey = true,
+        };
 
-// Add services to the container.
+        //options.Events = new JwtBearerEvents
+        //{
+        //    OnMessageReceived = context =>
+        //    {
+        //        var accessToken = context.Request.Query["access_token"];
 
-//builder.Services
-//    .AddControllers(options =>
-//    {
-//        options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
-//    })
-//    .ConfigureApiBehaviorOptions(options =>
-//    {
-//        options.SuppressModelStateInvalidFilter = true;
-//    });
+        //        var path = context.HttpContext.Request.Path;
+        //        if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/gamehub")))
+        //        {
+        //            context.Token = accessToken;
+        //        }
+        //        return Task.CompletedTask;
+        //    }
+        //};
+    });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddAuthorization();
 
-// Minimal APIs
-//builder.Services.AddEndpointsApiExplorer();
-
-//builder.Services.AddSwaggerGen();
-//
 //builder.Services.AddSignalR();
 //builder.Services.AddSingleton<GameManager>();
 
@@ -119,31 +118,20 @@ rootGroup.MapTournamentsApi();
 rootGroup.MapMapsApi();
 rootGroup.MapGamesApi();
 
-//// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-//
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
 
-    var context = services.GetRequiredService<DataContext>();
-    context.Database.EnsureCreated();
-    new DbInitializer(context);
+    //var context = services.GetRequiredService<DataContext>();
+    //context.Database.EnsureCreated();
+    //new DbInitializer(context);
+    var dbInitializer = services.GetRequiredService<DbInitializer>();
+    await dbInitializer.SeedAsync();
 }
-//
-//app.UseHttpsRedirection();
-//
-//app.UseAuthentication();
-//app.UseAuthorization();
-//
-//app.UseMiddleware<TokenManagerMiddleware>();
-//
-//app.MapControllers();
-//
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 //app.MapHub<GameHub>("/gamehub");
 
 app.Run();

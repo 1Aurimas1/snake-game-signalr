@@ -1,33 +1,35 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace snake_game.Models;
 
-public enum UserType
+public static class UserRoles
 {
-    Basic,
-    Admin,
+    public const string Admin = nameof(Admin);
+    public const string Basic = nameof(Basic);
+
+    public static readonly IReadOnlyCollection<string> All = new[] { Admin, Basic };
 }
 
-public class User
+public class User : IdentityUser<int>
 {
-    public int Id { get; set; }
-    public string Username { get; set; }
-    public string Email { get; set; }
-    public string PasswordHash { get; set; }
-    public UserType UserType { get; set; }
-
     public List<Participation> Participations { get; set; } = new();
+
+    public bool ForceRelogin { get; set; }
 }
 
-public record UserDto(int Id, string Username);
+public record SuccessfulLoginDto(string AccessToken, string RefreshToken);
+public record RefreshAccessTokenDto(string RefreshToken);
 
-public record LoginUserDto(string Username, string Password);
+public record UserDto(int Id, string UserName);
+public record LoginUserDto(string UserName, string Password);
 
 public class BaseUserDto
 {
-    public string Username { get; set; }
+    public string UserName { get; set; }
     public string Email { get; set; }
 }
 
-public class CreateUserDto : BaseUserDto
+public class RegisterUserDto : BaseUserDto
 {
     public string Password { get; set; }
     public string PasswordConfirmation { get; set; }
@@ -37,32 +39,30 @@ public class UpdateUserDto : BaseUserDto { }
 
 public static class UserMapper
 {
-    public static UserDto ToDto(this User user) => new UserDto(user.Id, user.Username);
+    public static UserDto ToDto(this User user) => new UserDto(user.Id, user.UserName);
 
-    public static User FromCreateDto(this CreateUserDto dto, string passwordHash)
+    public static User FromRegisterDto(this RegisterUserDto dto)
     {
         return new User
         {
-            Username = dto.Username,
+            UserName = dto.UserName,
             Email = dto.Email,
-            PasswordHash = passwordHash,
-            UserType = UserType.Basic,
         };
     }
 
     public static void UpdateWithDto(this User user, UpdateUserDto dto)
     {
-        if (!string.IsNullOrEmpty(dto.Username) && string.IsNullOrEmpty(dto.Email))
+        if (!string.IsNullOrEmpty(dto.UserName) && string.IsNullOrEmpty(dto.Email))
         {
-            user.Username = dto.Username;
+            user.UserName = dto.UserName;
         }
-        else if (string.IsNullOrEmpty(dto.Username) && !string.IsNullOrEmpty(dto.Email))
+        else if (string.IsNullOrEmpty(dto.UserName) && !string.IsNullOrEmpty(dto.Email))
         {
             user.Email = dto.Email;
         }
         else
         {
-            user.Username = dto.Username;
+            user.UserName = dto.UserName;
             user.Email = dto.Email;
         }
     }

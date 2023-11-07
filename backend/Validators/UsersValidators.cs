@@ -1,40 +1,43 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 using snake_game.Models;
+
+namespace snake_game.Validators.UsersValidators;
 
 public class BaseUserDtoValidator<T> : AbstractValidator<T>
     where T : BaseUserDto
 {
-    public BaseUserDtoValidator(DataContext dbContext) { }
+    private readonly UserManager<User> _userManager;
 
-    protected bool IsNameUnique(DataContext dbContext, string username)
+    public BaseUserDtoValidator(UserManager<User> userManager)
     {
-        return !dbContext.Users.Any(x => x.Username == username);
+        _userManager = userManager;
     }
 
-    protected bool IsEmailUnique(DataContext dbContext, string email)
+    protected async Task<bool> IsNameUnique(string username)
     {
-        return !dbContext.Users.Any(x => x.Email == email);
+        var user = await _userManager.FindByNameAsync(username);
+
+        return user == null ? true : false;
+    }
+
+    protected async Task<bool> IsEmailUnique(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+
+        return user == null ? true : false;
     }
 }
 
-public class CreateUserDtoValidator : BaseUserDtoValidator<CreateUserDto>
+public class RegisterUserDtoValidator : BaseUserDtoValidator<RegisterUserDto>
 {
-    public CreateUserDtoValidator(DataContext dbContext)
-        : base(dbContext)
+    public RegisterUserDtoValidator(UserManager<User> userManager)
+        : base(userManager)
     {
-        RuleFor(x => x.Username)
-            .NotEmpty()
-            .Length(5, 15)
-            .Must((user, username) => IsNameUnique(dbContext, username))
-            .WithMessage("The username is already in use.");
-        RuleFor(x => x.Email)
-            .NotEmpty()
-            .EmailAddress()
-            .Must((user, email) => IsEmailUnique(dbContext, email))
-            .WithMessage("The email is already in use.");
+        RuleFor(x => x.UserName).ValidateUsernameFull(IsNameUnique);
+        RuleFor(x => x.Email).ValidateUsernameFull(IsEmailUnique);
         RuleFor(x => x.Password)
-            .NotEmpty()
-            .Length(6, 30)
+            .ValidatePasswordBasic()
             .Must((model, field) => field == model.PasswordConfirmation)
             .WithMessage("Passwords must match");
     }
@@ -42,29 +45,63 @@ public class CreateUserDtoValidator : BaseUserDtoValidator<CreateUserDto>
 
 public class UpdateUserDtoValidator : BaseUserDtoValidator<UpdateUserDto>
 {
-    public UpdateUserDtoValidator(DataContext dbContext)
-        : base(dbContext)
+    public UpdateUserDtoValidator(UserManager<User> userManager)
+        : base(userManager)
     {
-        RuleFor(x => x.Username)
-            .NotEmpty()
-            .Length(5, 15)
-            .Must((user, username) => IsNameUnique(dbContext, username))
-            .WithMessage("The username is already in use.")
+        RuleFor(x => x.UserName)
+            .ValidateUsernameFull(IsNameUnique)
             .When(x => string.IsNullOrEmpty(x.Email));
         RuleFor(x => x.Email)
-            .NotEmpty()
-            .EmailAddress()
-            .Must((user, email) => IsEmailUnique(dbContext, email))
-            .WithMessage("The email is already in use.")
-            .When(x => string.IsNullOrEmpty(x.Username));
+            .ValidateEmail(IsEmailUnique)
+            .When(x => string.IsNullOrEmpty(x.UserName));
     }
 }
 
 public class LoginUserDtoValidator : AbstractValidator<LoginUserDto>
 {
-    public LoginUserDtoValidator(DataContext dbContext)
+    public LoginUserDtoValidator(UserManager<User> userManager)
     {
-        RuleFor(x => x.Username).NotEmpty().Length(5, 15);
-        RuleFor(x => x.Password).NotEmpty().Length(6, 30);
+        RuleFor(x => x.UserName).ValidateUsernameBasic();
+        RuleFor(x => x.Password).ValidatePasswordBasic();
+    }
+}
+
+public static class UserValidatorExtensions
+{
+    public static IRuleBuilderOptions<T, string> ValidateUsernameBasic<T>(
+        this IRuleBuilder<T, string> ruleBuilder
+    )
+    {
+        return ruleBuilder.NotEmpty().Length(5, 15);
+    }
+
+    public static IRuleBuilderOptions<T, string> ValidateUsernameFull<T>(
+        this IRuleBuilder<T, string> ruleBuilder,
+        Func<string, Task<bool>> IsUnique
+    )
+    {
+        return ruleBuilder
+            .ValidateUsernameBasic()
+            .MustAsync(async (username, cancellation) => await IsUnique(username))
+            .WithMessage("The username is already in use.");
+    }
+
+    public static IRuleBuilderOptions<T, string> ValidateEmail<T>(
+        this IRuleBuilder<T, string> ruleBuilder,
+        Func<string, Task<bool>> IsUnique
+    )
+    {
+        return ruleBuilder
+            .NotEmpty()
+            .EmailAddress()
+            .MustAsync(async (email, cancellation) => await IsUnique(email))
+            .WithMessage("The email is already in use.");
+    }
+
+    public static IRuleBuilderOptions<T, string> ValidatePasswordBasic<T>(
+        this IRuleBuilder<T, string> ruleBuilder
+    )
+    {
+        return ruleBuilder.NotEmpty().Length(6, 30);
     }
 }
