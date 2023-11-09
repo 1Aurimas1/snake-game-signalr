@@ -17,7 +17,7 @@ public record GameDto(
     string Name,
     bool IsOpen,
     GameMode Mode,
-    MapDto Map,
+    int MapId,
     UserDto Creator,
     List<UserDto> Players
 );
@@ -34,7 +34,7 @@ public static class GameMapper
             game.Name,
             game.IsOpen,
             game.Mode,
-            game.Map.ToDto(),
+            game.Map.Id,
             game.Creator.ToDto(),
             game.Players.Select(x => x.ToDto()).ToList()
         );

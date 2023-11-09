@@ -24,7 +24,7 @@ public static class GamesEndpoints
             .Include(x => x.Players)
             .AsQueryable();
     }
-    
+
     // Nonspecific endpoints
 
     public static async Task<IResult> GetAll(DataContext dbContext)
@@ -43,7 +43,7 @@ public static class GamesEndpoints
 
     // User specific endpoints
 
-    public static async Task<IResult> GetMany(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> GetMany(int userId, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
@@ -88,7 +88,11 @@ public static class GamesEndpoints
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var map = await dbContext.Maps.FirstOrDefaultAsync(x => x.Id == dto.MapId);
+        var map = await dbContext.Maps
+            .Include(x => x.Creator)
+            .Include(x => x.MapObstacles)
+            .ThenInclude(x => x.Position)
+            .FirstOrDefaultAsync(x => x.Id == dto.MapId);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
