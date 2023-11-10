@@ -22,7 +22,7 @@ builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(connecti
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddTransient<JwtTokenService>();
-builder.Services.AddScoped<DbInitializer>();
+builder.Services.AddScoped<DbSeeder>();
 
 builder.Services
     .AddIdentity<User, IdentityRole<int>>()
@@ -124,9 +124,9 @@ using (var scope = app.Services.CreateScope())
 
     //var context = services.GetRequiredService<DataContext>();
     //context.Database.EnsureCreated();
-    //new DbInitializer(context);
-    var dbInitializer = services.GetRequiredService<DbInitializer>();
-    await dbInitializer.SeedAsync();
+    //new DbSeeder(context);
+    var dbSeeder = services.GetRequiredService<DbSeeder>();
+    await dbSeeder.SeedAsync();
 }
 
 app.UseAuthentication();

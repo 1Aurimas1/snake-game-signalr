@@ -6,22 +6,22 @@ public static class UsersEndpoints
 {
     public static RouteGroupBuilder MapUsersApi(this RouteGroupBuilder group)
     {
-        group.MapGet("/users", GetMany);
-        group.MapGet("/users/{id}", Get);
-        group.MapPatch("/users/{id}", Update);
-        group.MapDelete("/users/{id}", Remove);
+        group.MapGet("/users", GetAllUsers);
+        group.MapGet("/users/{id}", GetUser);
+        group.MapPatch("/users/{id}", UpdateUser);
+        group.MapDelete("/users/{id}", RemoveUser);
 
         return group;
     }
 
-    public static async Task<IResult> GetMany(DataContext dbContext)
+    public static async Task<IResult> GetAllUsers(DataContext dbContext)
     {
         var users = await dbContext.Users.ToListAsync();
 
         return Results.Ok(users.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> Get(string id, UserManager<User> userManager)
+    public static async Task<IResult> GetUser(string id, UserManager<User> userManager)
     {
         var user = await userManager.FindByIdAsync(id);
         if (user == null)
@@ -30,7 +30,7 @@ public static class UsersEndpoints
         return Results.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> Update(
+    public static async Task<IResult> UpdateUser(
         string id,
         UpdateUserDto dto,
         IValidator<UpdateUserDto> validator,
@@ -57,7 +57,7 @@ public static class UsersEndpoints
         return Results.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> Remove(string id, UserManager<User> userManager)
+    public static async Task<IResult> RemoveUser(string id, UserManager<User> userManager)
     {
         var user = await userManager.FindByIdAsync(id);
         if (user == null)

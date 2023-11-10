@@ -5,55 +5,55 @@ public static class MapsEndpoints
 {
     public static RouteGroupBuilder MapMapsApi(this RouteGroupBuilder group)
     {
-        group.MapGet("/maps", GetAll);
-        group.MapPatch("/maps/{id}", Publish);
-        group.MapGet("/users/{userId}/maps", GetMany);
-        group.MapGet("/users/{userId}/maps/{id}", Get);
-        group.MapGet("/users/{userId}/tournaments/{tournamentId}/maps", GetManyByUserByTournament);
-        group.MapPost("/users/{userId}/maps", Create);
-        group.MapPatch("/users/{userId}/maps/{id}", Update);
-        group.MapDelete("/users/{userId}/maps/{id}", Remove);
+        group.MapGet("/maps", GetAllMaps);
+        group.MapPatch("/maps/{id}", PublishMap);
+        group.MapGet("/users/{userId}/maps", GetAllUserMaps);
+        group.MapGet("/users/{userId}/maps/{id}", GetUserMap);
+        group.MapGet("/users/{userId}/tournaments/{tournamentId}/maps", GetAllUserTournamentMaps);
+        group.MapPost("/users/{userId}/maps", CreateUserMap);
+        group.MapPatch("/users/{userId}/maps/{id}", UpdateUserMap);
+        group.MapDelete("/users/{userId}/maps/{id}", RemoveUserMap);
 
         return group;
     }
 
-    private static IQueryable<Map> GetCompleteQuery(DataContext dbContext)
+    private static IQueryable<Map> WithIncludes(this IQueryable<Map> query)
     {
-        return dbContext.Maps
+        return query
             .Include(x => x.Creator)
             .Include(x => x.MapObstacles)
-            .ThenInclude(x => x.Position)
-            .AsQueryable();
+            .ThenInclude(x => x.Position);
     }
 
-    // Nonspecific endpoints
-
-    public static async Task<IResult> GetAll(DataContext dbContext, bool isPublished = true)
+    public static async Task<IResult> GetAllMaps(DataContext dbContext, bool isPublished = true)
     {
         List<Map> maps;
         if (isPublished)
         {
-            maps = await GetCompleteQuery(dbContext).Where(x => x.IsPublished).ToListAsync();
+            maps = await dbContext.Maps.WithIncludes().Where(x => x.IsPublished).ToListAsync();
         }
         else
         {
             // TODO: forbidden for basic users
-            maps = await GetCompleteQuery(dbContext).Where(x => !x.IsPublished).ToListAsync();
+            maps = await dbContext.Maps.WithIncludes().Where(x => !x.IsPublished).ToListAsync();
         }
 
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
     // TODO: forbidden for basic users
-    public static async Task<IResult> Publish(int id, DataContext dbContext)
+    public static async Task<IResult> PublishMap(int id, DataContext dbContext)
     {
-        var map = await GetCompleteQuery(dbContext).FirstOrDefaultAsync(x => x.Id == id);
+        var map = await dbContext.Maps.WithIncludes().FirstOrDefaultAsync(x => x.Id == id);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
         if (map.IsPublished)
         {
-            var responseResult = JsonResponseGenerator.GenerateUnprocessableEntityResponse("mapId", "Map is already published");
+            var responseResult = JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                "mapId",
+                "Map is already published"
+            );
             return Results.UnprocessableEntity(responseResult);
         }
 
@@ -64,28 +64,28 @@ public static class MapsEndpoints
         return Results.Ok(map.ToDto());
     }
 
-    // User specific endpoints
-
-    public static async Task<IResult> GetMany(int userId, DataContext dbContext)
+    public static async Task<IResult> GetAllUserMaps(int userId, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var maps = await GetCompleteQuery(dbContext)
+        var maps = await dbContext.Maps
+            .WithIncludes()
             .Where(x => x.Creator.Id == userId)
             .ToListAsync();
 
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> Get(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> GetUserMap(int userId, int id, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var map = await GetCompleteQuery(dbContext)
+        var map = await dbContext.Maps
+            .WithIncludes()
             .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
@@ -93,7 +93,7 @@ public static class MapsEndpoints
         return Results.Ok(map.ToDto());
     }
 
-    public static async Task<IResult> GetManyByUserByTournament(
+    public static async Task<IResult> GetAllUserTournamentMaps(
         int userId,
         int tournamentId,
         DataContext dbContext
@@ -124,7 +124,7 @@ public static class MapsEndpoints
         return Results.Ok(mapsDtos);
     }
 
-    public static async Task<IResult> Create(
+    public static async Task<IResult> CreateUserMap(
         int userId,
         CreateMapDto dto,
         IValidator<CreateMapDto> validator,
@@ -160,7 +160,7 @@ public static class MapsEndpoints
         return Results.Created($"/maps/{map.Id}", map.ToDto());
     }
 
-    public static async Task<IResult> Update(
+    public static async Task<IResult> UpdateUserMap(
         int userId,
         int id,
         UpdateMapDto dto,
@@ -180,7 +180,8 @@ public static class MapsEndpoints
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         // TODO: different queries?
-        var map = await GetCompleteQuery(dbContext)
+        var map = await dbContext.Maps
+            .WithIncludes()
             .Include(x => x.MapRatings)
             .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
         if (map == null)
@@ -210,7 +211,7 @@ public static class MapsEndpoints
         return Results.Ok(map.ToDto());
     }
 
-    public static async Task<IResult> Remove(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> RemoveUserMap(int userId, int id, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)

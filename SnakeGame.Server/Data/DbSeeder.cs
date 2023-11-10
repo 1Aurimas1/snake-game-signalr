@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using SnakeGame.Server.Models;
 
-public class DbInitializer
+public class DbSeeder
 {
     private readonly DataContext _context;
     private readonly UserManager<User> _userManager;
     private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-    public DbInitializer(
+    public DbSeeder(
         DataContext context,
         UserManager<User> userManager,
         RoleManager<IdentityRole<int>> roleManager

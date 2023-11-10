@@ -5,64 +5,58 @@ public static class GamesEndpoints
 {
     public static RouteGroupBuilder MapGamesApi(this RouteGroupBuilder group)
     {
-        group.MapGet("/games", GetAll);
-        group.MapGet("/games/open", GetAllOpen);
-        group.MapGet("/users/{userId}/games", GetMany);
-        group.MapGet("/users/{userId}/games/{id}", Get);
-        group.MapPost("/users/{userId}/games", Create);
-        group.MapPatch("/users/{userId}/games/{id}", Update);
-        group.MapDelete("/users/{userId}/games/{id}", Remove);
+        group.MapGet("/games", GetAllGames);
+        group.MapGet("/games/open", GetAllOpenGames);
+        group.MapGet("/users/{userId}/games", GetAllUserGames);
+        group.MapGet("/users/{userId}/games/{id}", GetUserGame);
+        group.MapPost("/users/{userId}/games", CreateUserGame);
+        group.MapPatch("/users/{userId}/games/{id}", UpdateUserGame);
+        group.MapDelete("/users/{userId}/games/{id}", RemoveUserGame);
 
         return group;
     }
 
-    private static IQueryable<Game> GetCompleteQuery(DataContext dbContext)
+    private static IQueryable<Game> WithIncludes(this IQueryable<Game> query)
     {
-        return dbContext.Games
-            .Include(x => x.Map)
-            .Include(x => x.Creator)
-            .Include(x => x.Players)
-            .AsQueryable();
+        return query.Include(x => x.Map).Include(x => x.Creator).Include(x => x.Players);
     }
 
-    // Nonspecific endpoints
-
-    public static async Task<IResult> GetAll(DataContext dbContext)
+    public static async Task<IResult> GetAllGames(DataContext dbContext)
     {
-        var games = await GetCompleteQuery(dbContext).ToListAsync();
+        var games = await dbContext.Games.WithIncludes().ToListAsync();
 
         return Results.Ok(games.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> GetAllOpen(DataContext dbContext)
+    public static async Task<IResult> GetAllOpenGames(DataContext dbContext)
     {
-        var games = await GetCompleteQuery(dbContext).Where(x => x.IsOpen).ToListAsync();
+        var games = await dbContext.Games.WithIncludes().Where(x => x.IsOpen).ToListAsync();
 
         return Results.Ok(games.Select(x => x.ToDto()));
     }
 
-    // User specific endpoints
-
-    public static async Task<IResult> GetMany(int userId, DataContext dbContext)
+    public static async Task<IResult> GetAllUserGames(int userId, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var games = await GetCompleteQuery(dbContext)
+        var games = await dbContext.Games
+            .WithIncludes()
             .Where(x => x.Creator.Id == userId)
             .ToListAsync();
 
         return Results.Ok(games.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> Get(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> GetUserGame(int userId, int id, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await GetCompleteQuery(dbContext)
+        var game = await dbContext.Games
+            .WithIncludes()
             .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
         if (game == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
@@ -70,7 +64,7 @@ public static class GamesEndpoints
         return Results.Ok(game.ToDto());
     }
 
-    public static async Task<IResult> Create(
+    public static async Task<IResult> CreateUserGame(
         int userId,
         CreateGameDto dto,
         IValidator<CreateGameDto> validator,
@@ -104,7 +98,7 @@ public static class GamesEndpoints
         return Results.Created($"/users/{userId}/games/{game.Id}", game.ToDto());
     }
 
-    public static async Task<IResult> Update(
+    public static async Task<IResult> UpdateUserGame(
         int userId,
         int id,
         UpdateGameDto dto,
@@ -123,7 +117,8 @@ public static class GamesEndpoints
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await GetCompleteQuery(dbContext)
+        var game = await dbContext.Games
+            .WithIncludes()
             .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
         if (game == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
@@ -159,7 +154,7 @@ public static class GamesEndpoints
         return Results.Ok(game.ToDto());
     }
 
-    public static async Task<IResult> Remove(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> RemoveUserGame(int userId, int id, DataContext dbContext)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
