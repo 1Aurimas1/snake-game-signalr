@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.DataServices;
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
@@ -18,6 +19,10 @@ var connectionString =
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddTransient<IUserService, UserService>();
+builder.Services.AddTransient<IMapService, MapService>();
+builder.Services.AddTransient<IGameService, GameService>();
+builder.Services.AddTransient<ITournamentService, TournamentService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 

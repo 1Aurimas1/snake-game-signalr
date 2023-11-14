@@ -49,21 +49,4 @@ public static class UserMapper
             Email = dto.Email,
         };
     }
-
-    public static void UpdateWithDto(this User user, UpdateUserDto dto)
-    {
-        if (!string.IsNullOrEmpty(dto.UserName) && string.IsNullOrEmpty(dto.Email))
-        {
-            user.UserName = dto.UserName;
-        }
-        else if (string.IsNullOrEmpty(dto.UserName) && !string.IsNullOrEmpty(dto.Email))
-        {
-            user.Email = dto.Email;
-        }
-        else
-        {
-            user.UserName = dto.UserName;
-            user.Email = dto.Email;
-        }
-    }
 }
