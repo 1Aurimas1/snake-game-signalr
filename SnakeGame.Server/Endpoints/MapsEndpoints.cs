@@ -1,5 +1,6 @@
 using FluentValidation;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.DataServices;
 
 public static class MapsEndpoints
 {
@@ -17,34 +18,18 @@ public static class MapsEndpoints
         return group;
     }
 
-    private static IQueryable<Map> WithIncludes(this IQueryable<Map> query)
+    public static async Task<IResult> GetAllMaps(IMapService mapService, bool isPublished = true)
     {
-        return query
-            .Include(x => x.Creator)
-            .Include(x => x.MapObstacles)
-            .ThenInclude(x => x.Position);
-    }
-
-    public static async Task<IResult> GetAllMaps(DataContext dbContext, bool isPublished = true)
-    {
-        List<Map> maps;
-        if (isPublished)
-        {
-            maps = await dbContext.Maps.WithIncludes().Where(x => x.IsPublished).ToListAsync();
-        }
-        else
-        {
-            // TODO: forbidden for basic users
-            maps = await dbContext.Maps.WithIncludes().Where(x => !x.IsPublished).ToListAsync();
-        }
+        // TODO: forbidden for basic users
+        List<Map> maps = await mapService.GetAllFiltered(x => x.IsPublished == isPublished);
 
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
     // TODO: forbidden for basic users
-    public static async Task<IResult> PublishMap(int id, DataContext dbContext)
+    public static async Task<IResult> PublishMap(int id, IMapService mapService)
     {
-        var map = await dbContext.Maps.WithIncludes().FirstOrDefaultAsync(x => x.Id == id);
+        var map = await mapService.Get(id);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
@@ -57,36 +42,38 @@ public static class MapsEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        map.IsPublished = true;
-
-        await dbContext.SaveChangesAsync();
+        await mapService.Publish(map);
 
         return Results.Ok(map.ToDto());
     }
 
-    public static async Task<IResult> GetAllUserMaps(int userId, DataContext dbContext)
+    public static async Task<IResult> GetAllUserMaps(
+        int userId,
+        IUserService userService,
+        IMapService mapService
+    )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var maps = await dbContext.Maps
-            .WithIncludes()
-            .Where(x => x.Creator.Id == userId)
-            .ToListAsync();
+        var maps = await mapService.GetAllFiltered(x => x.Creator.Id == userId);
 
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> GetUserMap(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> GetUserMap(
+        int userId,
+        int id,
+        IUserService userService,
+        IMapService mapService
+    )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var map = await dbContext.Maps
-            .WithIncludes()
-            .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
+        var map = await mapService.GetUserMap(userId, id);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
@@ -96,29 +83,20 @@ public static class MapsEndpoints
     public static async Task<IResult> GetAllUserTournamentMaps(
         int userId,
         int tournamentId,
-        DataContext dbContext
+        IUserService userService,
+        ITournamentService tournamentService,
+        IMapService mapService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments
-            .Include(x => x.Organizer)
-            .FirstOrDefaultAsync(x => x.Id == tournamentId && x.Organizer.Id == userId);
+        var tournament = await tournamentService.GetUserTournament(userId, tournamentId);
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
-        var rounds = await dbContext.Rounds
-            .Include(x => x.Map)
-            .ThenInclude(x => x.MapRatings)
-            .Include(x => x.Map)
-            .ThenInclude(x => x.MapObstacles)
-            .Include(x => x.Map)
-            .ThenInclude(x => x.Creator)
-            .Where(x => x.TournamentId == tournamentId)
-            .ToListAsync();
-
+        var rounds = await tournamentService.GetAllTournamentRounds(tournamentId);
         var mapsDtos = rounds.Select(x => x.Map.ToDto());
 
         return Results.Ok(mapsDtos);
@@ -128,7 +106,8 @@ public static class MapsEndpoints
         int userId,
         CreateMapDto dto,
         IValidator<CreateMapDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        IMapService mapService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -138,24 +117,11 @@ public static class MapsEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var uniqueObstacleIds = dto.MapObstacles.Select(x => x.ObstacleId).Distinct().ToList();
-        var uniqueObstacles = dbContext.Obstacles
-            .Where(x => uniqueObstacleIds.Contains(x.Id))
-            .ToDictionary(x => x.Id, x => x);
-
-        List<MapObstacle> mapObstacles = new();
-        foreach (var mapObstacleDto in dto.MapObstacles)
-            if (uniqueObstacles.ContainsKey(mapObstacleDto.ObstacleId))
-                mapObstacles.Add(mapObstacleDto.FromCreateDto());
-
-        var map = dto.FromCreateDto(mapObstacles, user);
-        dbContext.Maps.Add(map);
-
-        await dbContext.SaveChangesAsync();
+        var map = await mapService.Add(dto, user);
 
         return Results.Created($"/maps/{map.Id}", map.ToDto());
     }
@@ -165,7 +131,8 @@ public static class MapsEndpoints
         int id,
         UpdateMapDto dto,
         IValidator<UpdateMapDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        IMapService mapService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -175,56 +142,35 @@ public static class MapsEndpoints
             return Results.UnprocessableEntity(response);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        // TODO: different queries?
-        var map = await dbContext.Maps
-            .WithIncludes()
-            .Include(x => x.MapRatings)
-            .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
+        var map = await mapService.GetUserMap(userId, id);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
-        // TODO: unique userId and mapId in MapRating table
-        var mapRating = map.MapRatings.FirstOrDefault(
-            x => x.UserId == dto.UserId && x.MapId == map.Id
-        );
-        if (mapRating == null)
-        {
-            mapRating = new MapRating { Rating = dto.MapRating, UserId = dto.UserId, };
-            map.MapRatings.Add(mapRating);
-        }
-        else
-        {
-            mapRating.Rating = dto.MapRating;
-        }
-
-        var newRating = (double)map.MapRatings.Sum(x => x.Rating) / map.MapRatings.Count;
-
-        // TODO?: if user gets deleted update rating
-        map.Rating = newRating;
-
-        await dbContext.SaveChangesAsync();
+        await mapService.Update(map, dto);
 
         return Results.Ok(map.ToDto());
     }
 
-    public static async Task<IResult> RemoveUserMap(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> RemoveUserMap(
+        int userId,
+        int id,
+        IUserService userService,
+        IMapService mapService
+    )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var map = await dbContext.Maps.FirstOrDefaultAsync(
-            x => x.Id == id && x.Creator.Id == userId
-        );
+        var map = await mapService.GetUserMap(userId, id);
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
-        dbContext.Maps.Remove(map);
-        await dbContext.SaveChangesAsync();
+        await mapService.Remove(map);
 
         return Results.NoContent();
     }

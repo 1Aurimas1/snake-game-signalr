@@ -1,6 +1,7 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http.HttpResults;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.DataServices;
 
 public static class UsersEndpoints
 {
@@ -14,59 +15,69 @@ public static class UsersEndpoints
         return group;
     }
 
-    public static async Task<IResult> GetAllUsers(DataContext dbContext)
+    public static async Task<Ok<List<UserDto>>> GetAllUsers(IUserService userService)
     {
-        var users = await dbContext.Users.ToListAsync();
+        var users = await userService.GetAll();
 
-        return Results.Ok(users.Select(x => x.ToDto()));
+        return TypedResults.Ok(users.Select(x => x.ToDto()).ToList());
     }
 
-    public static async Task<IResult> GetUser(string id, UserManager<User> userManager)
+    public static async Task<Results<Ok<UserDto>, NotFound<CustomError>>> GetUser(
+        int id,
+        IUserService userService
+    )
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await userService.Get(id);
         if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        return Results.Ok(user.ToDto());
+        return TypedResults.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> UpdateUser(
-        string id,
+    public static async Task<
+        Results<
+            Ok<UserDto>,
+            UnprocessableEntity<IEnumerable<CustomError>>,
+            UnprocessableEntity<string>,
+            NotFound<CustomError>
+        >
+    > UpdateUser(
+        int id,
         UpdateUserDto dto,
         IValidator<UpdateUserDto> validator,
-        UserManager<User> userManager
+        IUserService userService
     )
     {
         var result = await validator.ValidateAsync(dto);
         if (!result.IsValid)
         {
             var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(responseResult);
+            return TypedResults.UnprocessableEntity(responseResult);
         }
 
-        var user = await userManager.FindByIdAsync(id);
+        var user = await userService.Get(id);
         if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        user.UpdateWithDto(dto);
-
-        var updateResult = await userManager.UpdateAsync(user);
+        var updateResult = await userService.Update(user, dto);
         if (!updateResult.Succeeded)
-            return Results.UnprocessableEntity("Update error");
+            return TypedResults.UnprocessableEntity("Update error");
 
-        return Results.Ok(user.ToDto());
+        return TypedResults.Ok(user.ToDto());
     }
 
-    public static async Task<IResult> RemoveUser(string id, UserManager<User> userManager)
+    public static async Task<
+        Results<NoContent, NotFound<CustomError>, UnprocessableEntity<string>>
+    > RemoveUser(int id, IUserService userService)
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await userService.Get(id);
         if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var deleteResult = await userManager.DeleteAsync(user);
+        var deleteResult = await userService.Remove(user);
         if (!deleteResult.Succeeded)
-            return Results.UnprocessableEntity("Delete error");
+            return TypedResults.UnprocessableEntity("Delete error");
 
-        return Results.NoContent();
+        return TypedResults.NoContent();
     }
 }

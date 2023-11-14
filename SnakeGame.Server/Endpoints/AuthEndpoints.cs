@@ -1,9 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using SnakeGame.Server.Models;
 
 public static class AuthEndpoints
@@ -16,15 +14,6 @@ public static class AuthEndpoints
         group.MapPost("/accessToken", RefreshAccessToken);
 
         return group;
-    }
-
-    private static IQueryable<Map> GetCompleteQuery(DataContext dbContext)
-    {
-        return dbContext.Maps
-            .Include(x => x.Creator)
-            .Include(x => x.MapObstacles)
-            .ThenInclude(x => x.Position)
-            .AsQueryable();
     }
 
     public static async Task<IResult> Register(

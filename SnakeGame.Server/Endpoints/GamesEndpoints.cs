@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.DataServices;
 
 public static class GamesEndpoints
 {
@@ -17,38 +18,31 @@ public static class GamesEndpoints
         return group;
     }
 
-    private static IQueryable<Game> WithIncludes(this IQueryable<Game> query)
+    public static async Task<Ok<List<GameDto>>> GetAllGames(IGameService gameService)
     {
-        return query.Include(x => x.Map).Include(x => x.Creator).Include(x => x.Players);
-    }
-
-    public static async Task<Ok<List<GameDto>>> GetAllGames(DataContext dbContext)
-    {
-        var games = await dbContext.Games.WithIncludes().ToListAsync();
+        var games = await gameService.GetAll();
 
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 
-    public static async Task<Ok<List<GameDto>>> GetAllOpenGames(DataContext dbContext)
+    public static async Task<Ok<List<GameDto>>> GetAllOpenGames(IGameService gameService)
     {
-        var games = await dbContext.Games.WithIncludes().Where(x => x.IsOpen).ToListAsync();
+        var games = await gameService.GetAllFiltered(g => g.IsOpen);
 
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 
     public static async Task<Results<Ok<List<GameDto>>, NotFound<CustomError>>> GetAllUserGames(
         int userId,
-        DataContext dbContext
+        IUserService userService,
+        IGameService gameService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var games = await dbContext.Games
-            .WithIncludes()
-            .Where(x => x.Creator.Id == userId)
-            .ToListAsync();
+        var games = await gameService.GetAllFiltered(g => g.Creator.Id == userId);
 
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
@@ -56,16 +50,15 @@ public static class GamesEndpoints
     public static async Task<Results<Ok<GameDto>, NotFound<CustomError>>> GetUserGame(
         int userId,
         int id,
-        DataContext dbContext
+        IUserService userService,
+        IGameService gameService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await dbContext.Games
-            .WithIncludes()
-            .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
+        var game = await gameService.GetUserGame(userId, id);
         if (game == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
 
@@ -82,7 +75,9 @@ public static class GamesEndpoints
         int userId,
         CreateGameDto dto,
         IValidator<CreateGameDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        IMapService mapService,
+        IGameService gameService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -92,22 +87,16 @@ public static class GamesEndpoints
             return TypedResults.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var map = await dbContext.Maps
-            .Include(x => x.Creator)
-            .Include(x => x.MapObstacles)
-            .ThenInclude(x => x.Position)
-            .FirstOrDefaultAsync(x => x.Id == dto.MapId);
+        var map = await mapService.Get(dto.MapId);
         if (map == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
         var game = dto.FromCreateDto(map, user);
-        dbContext.Games.Add(game);
-
-        await dbContext.SaveChangesAsync();
+        await gameService.Add(game);
 
         return TypedResults.Created($"/users/{userId}/games/{game.Id}", game.ToDto());
     }
@@ -124,7 +113,8 @@ public static class GamesEndpoints
         int id,
         UpdateGameDto dto,
         IValidator<UpdateGameDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        IGameService gameService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -134,13 +124,11 @@ public static class GamesEndpoints
             return TypedResults.UnprocessableEntity(response);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await dbContext.Games
-            .WithIncludes()
-            .FirstOrDefaultAsync(x => x.Id == id && x.Creator.Id == userId);
+        var game = await gameService.GetUserGame(userId, id);
         if (game == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
         else if (!game.IsOpen)
@@ -151,7 +139,7 @@ public static class GamesEndpoints
                 )
             );
 
-        var player = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == dto.PlayerId);
+        var player = await userService.Get(dto.PlayerId);
         if (player == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("player"));
         else if (game.Players.Exists(x => x.Id == dto.PlayerId))
@@ -162,15 +150,7 @@ public static class GamesEndpoints
                 )
             );
 
-        game.IsOpen = game.Mode switch
-        {
-            GameMode.Duel or GameMode.Solo => false,
-            _ => throw new NotImplementedException("Add new GameMode enum members"),
-        };
-
-        game.Players.Add(player);
-
-        await dbContext.SaveChangesAsync();
+        await gameService.Update(game, player);
 
         return TypedResults.Ok(game.ToDto());
     }
@@ -178,22 +158,19 @@ public static class GamesEndpoints
     public static async Task<Results<NoContent, NotFound<CustomError>>> RemoveUserGame(
         int userId,
         int id,
-        DataContext dbContext
+        IUserService userService,
+        IGameService gameService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await dbContext.Games.FirstOrDefaultAsync(
-            x => x.Id == id && x.Creator.Id == userId
-        );
+        var game = await gameService.GetUserGame(userId, id);
         if (game == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
 
-        dbContext.Games.Remove(game);
-
-        await dbContext.SaveChangesAsync();
+        await gameService.Remove(game);
 
         return TypedResults.NoContent();
     }

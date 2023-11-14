@@ -1,5 +1,6 @@
 using FluentValidation;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.DataServices;
 
 public static class TournamentsEndpoints
 {
@@ -21,46 +22,40 @@ public static class TournamentsEndpoints
         return group;
     }
 
-    private static IQueryable<Tournament> WithIncludes(this IQueryable<Tournament> query)
+    public static async Task<IResult> GetAllTournaments(ITournamentService tournamentService)
     {
-        return query
-            .Include(x => x.Organizer)
-            .Include(x => x.Participations)
-            .ThenInclude(x => x.User)
-            .Include(x => x.Rounds)
-            .ThenInclude(x => x.Map);
-    }
-
-    public static async Task<IResult> GetAllTournaments(DataContext dbContext)
-    {
-        var tournaments = await dbContext.Tournaments.WithIncludes().ToListAsync();
+        var tournaments = await tournamentService.GetAll();
 
         return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> GetAllUserTournaments(int userId, DataContext dbContext)
+    public static async Task<IResult> GetAllUserTournaments(
+        int userId,
+        IUserService userService,
+        ITournamentService tournamentService
+    )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournaments = await dbContext.Tournaments
-            .WithIncludes()
-            .Where(x => x.Organizer.Id == userId)
-            .ToListAsync();
+        var tournaments = await tournamentService.GetAllFiltered(x => x.Organizer.Id == userId);
 
         return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
 
-    public static async Task<IResult> GetUserTournament(int userId, int id, DataContext dbContext)
+    public static async Task<IResult> GetUserTournament(
+        int userId,
+        int id,
+        IUserService userService,
+        ITournamentService tournamentService
+    )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments
-            .WithIncludes()
-            .FirstOrDefaultAsync(x => x.Id == id && x.Organizer.Id == userId);
+        var tournament = await tournamentService.GetUserTournament(userId, id);
 
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
@@ -72,7 +67,8 @@ public static class TournamentsEndpoints
         int userId,
         CreateTournamentDto dto,
         IValidator<CreateTournamentDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        ITournamentService tournamentService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -82,14 +78,11 @@ public static class TournamentsEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = dto.FromCreateDto(user);
-        dbContext.Tournaments.Add(tournament);
-
-        await dbContext.SaveChangesAsync();
+        var tournament = await tournamentService.Add(dto, user);
 
         return Results.Created($"/users/{userId}/tournaments/{tournament.Id}", tournament.ToDto());
     }
@@ -99,7 +92,8 @@ public static class TournamentsEndpoints
         int id,
         UpdateTournamentDto dto,
         IValidator<UpdateTournamentDto> validator,
-        DataContext dbContext
+        IUserService userService,
+        ITournamentService tournamentService
     )
     {
         var result = await validator.ValidateAsync(dto);
@@ -109,13 +103,11 @@ public static class TournamentsEndpoints
             return Results.UnprocessableEntity(response);
         }
 
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments
-            .WithIncludes()
-            .FirstOrDefaultAsync(x => x.Id == id && x.Organizer.Id == userId);
+        var tournament = await tournamentService.GetUserTournament(userId, id);
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
@@ -127,7 +119,7 @@ public static class TournamentsEndpoints
                 )
             );
 
-        var participant = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == dto.ParticipantId);
+        var participant = await userService.Get(dto.ParticipantId);
         if (participant == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("participant"));
 
@@ -139,11 +131,7 @@ public static class TournamentsEndpoints
                 )
             );
 
-        tournament.Participations.Add(
-            new Participation { User = participant, Tournament = tournament }
-        );
-
-        await dbContext.SaveChangesAsync();
+        await tournamentService.Update(participant, tournament);
 
         return Results.Ok(tournament.ToDto());
     }
@@ -151,21 +139,19 @@ public static class TournamentsEndpoints
     public static async Task<IResult> RemoveUserTournament(
         int userId,
         int id,
-        DataContext dbContext
+        IUserService userService,
+        ITournamentService tournamentService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments.FirstOrDefaultAsync(
-            x => x.Id == id && x.Organizer.Id == userId
-        );
+        var tournament = await tournamentService.GetUserTournament(userId, id);
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
-        dbContext.Tournaments.Remove(tournament);
-        await dbContext.SaveChangesAsync();
+        await tournamentService.Remove(tournament);
 
         return Results.NoContent();
     }
@@ -173,22 +159,19 @@ public static class TournamentsEndpoints
     public static async Task<IResult> GetAllUserTournamentRounds(
         int userId,
         int tournamentId,
-        DataContext dbContext
+        IUserService userService,
+        ITournamentService tournamentService
     )
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var tournament = await dbContext.Tournaments.FirstOrDefaultAsync(
-            x => x.Id == tournamentId && x.Organizer.Id == userId
-        );
+        var tournament = await tournamentService.GetUserTournament(userId, tournamentId);
         if (tournament == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("tournament"));
 
-        var rounds = await dbContext.Rounds
-            .Where(x => x.TournamentId == tournamentId)
-            .ToListAsync();
+        var rounds = await tournamentService.GetAllTournamentRounds(tournament.Id);
 
         return Results.Ok(rounds.Select(x => x.ToDto()));
     }
