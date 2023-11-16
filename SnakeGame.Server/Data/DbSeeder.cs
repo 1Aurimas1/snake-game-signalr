@@ -21,13 +21,12 @@ public class DbSeeder
     public async Task SeedAsync()
     {
         await AddDefaultRoles();
+        await AddBasicUsers(2);
         await AddAdminUser();
 
-        //await SeedObstaclesIfEmpty();
-        ////SeedAuth();
-        ////SeedUsersIfEmpty();
-        //await SeedMapsIfEmpty();
-        //await SeedTournamentsIfEmpty();
+        await AddObstacles();
+        await AddMaps();
+        await AddTournaments();
     }
 
     private async Task AddDefaultRoles()
@@ -47,10 +46,7 @@ public class DbSeeder
         var existingAdminUser = await _userManager.FindByNameAsync(newAdminUser.UserName);
         if (existingAdminUser == null)
         {
-            var createAdminUserResult = await _userManager.CreateAsync(
-                newAdminUser,
-                "Pa55word!"
-            );
+            var createAdminUserResult = await _userManager.CreateAsync(newAdminUser, "Pa55word!");
             if (createAdminUserResult.Succeeded)
             {
                 await _userManager.AddToRolesAsync(newAdminUser, UserRoles.All);
@@ -58,38 +54,35 @@ public class DbSeeder
         }
     }
 
-    private async Task SeedUsersIfEmpty()
+    private async Task AddBasicUser(int idx)
     {
-        if (await _context.Users.AnyAsync())
-            return;
-
-        var initialUsers = new[]
+        var newBasicUser = new User
         {
-            new User
-            {
-                UserName = "naudotojas1",
-                Email = "email1@email.com",
-                PasswordHash = "passHash",
-            },
-            new User
-            {
-                UserName = "naudotojas2",
-                Email = "email2@email.com",
-                PasswordHash = "passHash",
-            },
-            new User
-            {
-                UserName = "admin1",
-                Email = "email3@email.com",
-                PasswordHash = "passHash",
-            },
+            UserName = $"naudotojas{idx}",
+            Email = $"naudotojas{idx}@email.com"
         };
 
-        await _context.Users.AddRangeAsync(initialUsers);
-        await _context.SaveChangesAsync();
+        var existingBasicUser = await _userManager.FindByNameAsync(newBasicUser.UserName);
+        if (existingBasicUser == null)
+        {
+            var createBasicUserResult = await _userManager.CreateAsync(
+                newBasicUser,
+                $"Pa55word!{idx}"
+            );
+            if (createBasicUserResult.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(newBasicUser, UserRoles.Basic);
+            }
+        }
     }
 
-    private async Task SeedMapsIfEmpty()
+    private async Task AddBasicUsers(int amount)
+    {
+        foreach (var idx in Enumerable.Range(1, amount))
+            await AddBasicUser(idx);
+    }
+
+    private async Task AddMaps()
     {
         if (await _context.Maps.AnyAsync())
             return;
@@ -151,7 +144,7 @@ public class DbSeeder
             new Map
             {
                 Name = "naudotojo2_zemelapis2",
-                IsPublished = true,
+                IsPublished = false,
                 Rating = 0,
                 Creator = users[1],
                 MapObstacles = new List<MapObstacle>
@@ -213,7 +206,7 @@ public class DbSeeder
         await _context.SaveChangesAsync();
     }
 
-    private async Task SeedTournamentsIfEmpty()
+    private async Task AddTournaments()
     {
         if (await _context.Tournaments.AnyAsync())
             return;
@@ -312,7 +305,7 @@ public class DbSeeder
         await _context.SaveChangesAsync();
     }
 
-    private async Task SeedObstaclesIfEmpty()
+    private async Task AddObstacles()
     {
         if (await _context.Obstacles.AnyAsync())
             return;
