@@ -1,4 +1,6 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
+using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 
@@ -9,8 +11,10 @@ public static class TournamentsEndpoints
         // Tournaments
         group.MapGet("/tournaments", GetAllTournaments);
         group.MapGet("/users/{userId}/tournaments", GetAllUserTournaments);
-        group.MapGet("/users/{userId}/tournaments/{id}", GetUserTournament);
-        group.MapPost("/users/{userId}/tournaments", CreateUserTournament);
+        group
+            .MapGet("/users/{userId}/tournaments/{id}", GetUserTournament)
+            .WithName(nameof(GetUserTournament));
+        group.MapPost("/tournaments", CreateUserTournament);
         group.MapPatch("/users/{userId}/tournaments/{id}", UpdateUserTournament);
         group.MapDelete("/users/{userId}/tournaments/{id}", RemoveUserTournament);
         // Rounds
@@ -22,6 +26,7 @@ public static class TournamentsEndpoints
         return group;
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetAllTournaments(ITournamentService tournamentService)
     {
         var tournaments = await tournamentService.GetAll();
@@ -29,6 +34,7 @@ public static class TournamentsEndpoints
         return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetAllUserTournaments(
         int userId,
         IUserService userService,
@@ -44,6 +50,7 @@ public static class TournamentsEndpoints
         return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetUserTournament(
         int userId,
         int id,
@@ -63,8 +70,9 @@ public static class TournamentsEndpoints
         return Results.Ok(tournament.ToDto());
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     public static async Task<IResult> CreateUserTournament(
-        int userId,
+        HttpContext httpContext,
         CreateTournamentDto dto,
         IValidator<CreateTournamentDto> validator,
         IUserService userService,
@@ -78,30 +86,44 @@ public static class TournamentsEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
+        if (!httpContext.TryGetJwtUserId(out int userId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "UserId",
+                    "Invalid user ID"
+                )
+            );
+
         var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         var tournament = await tournamentService.Add(dto, user);
 
-        return Results.Created($"/users/{userId}/tournaments/{tournament.Id}", tournament.ToDto());
+        return TypedResults.CreatedAtRoute(
+            tournament.ToDto(),
+            nameof(GetUserTournament),
+            new { userId = userId, id = tournament.Id }
+        );
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> UpdateUserTournament(
         int userId,
         int id,
-        UpdateTournamentDto dto,
+        HttpContext httpContext,
         IValidator<UpdateTournamentDto> validator,
         IUserService userService,
         ITournamentService tournamentService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var response = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(response);
-        }
+        if (!httpContext.TryGetJwtUserId(out int participantId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "participantId",
+                    "Invalid participant ID"
+                )
+            );
 
         var user = await userService.Get(userId);
         if (user == null)
@@ -119,11 +141,11 @@ public static class TournamentsEndpoints
                 )
             );
 
-        var participant = await userService.Get(dto.ParticipantId);
+        var participant = await userService.Get(participantId);
         if (participant == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("participant"));
 
-        if (tournament.Participations.Exists(x => x.UserId == dto.ParticipantId))
+        if (tournament.Participations.Exists(x => x.UserId == participantId))
             return Results.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "user",
@@ -136,8 +158,10 @@ public static class TournamentsEndpoints
         return Results.Ok(tournament.ToDto());
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     public static async Task<IResult> RemoveUserTournament(
         int userId,
+        HttpContext httpContext,
         int id,
         IUserService userService,
         ITournamentService tournamentService
@@ -156,6 +180,7 @@ public static class TournamentsEndpoints
         return Results.NoContent();
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     public static async Task<IResult> GetAllUserTournamentRounds(
         int userId,
         int tournamentId,

@@ -22,7 +22,7 @@ public record MapDto(
 
 public record CreateMapDto(string Name, List<CreateMapObstacleDto> MapObstacles);
 
-public record UpdateMapDto(int MapRating, int UserId);
+public record UpdateMapDto(int MapRating);
 
 public static class MapMapper
 {

@@ -10,7 +10,7 @@ public interface IMapService
     Task<Map?> Get(int id);
     Task<Map?> GetUserMap(int userId, int id);
     Task<Map> Add(CreateMapDto dto, User creator);
-    Task Update(Map map, UpdateMapDto dto);
+    Task Update(Map map, UpdateMapDto dto, int userId);
     Task Remove(Map map);
     Task Publish(Map map);
 }
@@ -67,15 +67,13 @@ public class MapService : IMapService
         return map;
     }
 
-    public async Task Update(Map map, UpdateMapDto dto)
+    public async Task Update(Map map, UpdateMapDto dto, int userId)
     {
         // TODO: unique userId and mapId in MapRating table
-        var mapRating = map.MapRatings.FirstOrDefault(
-            x => x.MapId == map.Id && x.UserId == dto.UserId
-        );
+        var mapRating = map.MapRatings.FirstOrDefault(x => x.MapId == map.Id && x.UserId == userId);
         if (mapRating == null)
         {
-            mapRating = new MapRating { Rating = dto.MapRating, UserId = dto.UserId, };
+            mapRating = new MapRating { Rating = dto.MapRating, UserId = userId, };
             map.MapRatings.Add(mapRating);
         }
         else

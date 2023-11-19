@@ -24,8 +24,6 @@ public record GameDto(
 
 public record CreateGameDto(string Name, GameMode Mode, int MapId);
 
-public record UpdateGameDto(int PlayerId);
-
 public static class GameMapper
 {
     public static GameDto ToDto(this Game game) =>

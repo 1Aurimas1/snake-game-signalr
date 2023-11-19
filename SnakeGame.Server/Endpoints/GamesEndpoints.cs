@@ -1,5 +1,7 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
+using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 
@@ -10,14 +12,15 @@ public static class GamesEndpoints
         group.MapGet("/games", GetAllGames);
         group.MapGet("/games/open", GetAllOpenGames);
         group.MapGet("/users/{userId}/games", GetAllUserGames);
-        group.MapGet("/users/{userId}/games/{id}", GetUserGame);
-        group.MapPost("/users/{userId}/games", CreateUserGame);
+        group.MapGet("/users/{userId}/games/{id}", GetUserGame).WithName(nameof(GetUserGame));
+        group.MapPost("/games", CreateUserGame);
         group.MapPatch("/users/{userId}/games/{id}", UpdateUserGame);
-        group.MapDelete("/users/{userId}/games/{id}", RemoveUserGame);
+        group.MapDelete("/games/{id}", RemoveUserGame);
 
         return group;
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<Ok<List<GameDto>>> GetAllGames(IGameService gameService)
     {
         var games = await gameService.GetAll();
@@ -25,6 +28,7 @@ public static class GamesEndpoints
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<Ok<List<GameDto>>> GetAllOpenGames(IGameService gameService)
     {
         var games = await gameService.GetAllFiltered(g => g.IsOpen);
@@ -32,6 +36,7 @@ public static class GamesEndpoints
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<Results<Ok<List<GameDto>>, NotFound<CustomError>>> GetAllUserGames(
         int userId,
         IUserService userService,
@@ -47,6 +52,7 @@ public static class GamesEndpoints
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<Results<Ok<GameDto>, NotFound<CustomError>>> GetUserGame(
         int userId,
         int id,
@@ -65,16 +71,18 @@ public static class GamesEndpoints
         return TypedResults.Ok(game.ToDto());
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
         Results<
-            Created<GameDto>,
+            CreatedAtRoute<GameDto>,
             UnprocessableEntity<IEnumerable<CustomError>>,
+            UnprocessableEntity<CustomError>,
             NotFound<CustomError>
         >
     > CreateUserGame(
-        int userId,
         CreateGameDto dto,
         IValidator<CreateGameDto> validator,
+        HttpContext httpContext,
         IUserService userService,
         IMapService mapService,
         IGameService gameService
@@ -87,6 +95,14 @@ public static class GamesEndpoints
             return TypedResults.UnprocessableEntity(responseResult);
         }
 
+        if (!httpContext.TryGetJwtUserId(out int userId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "UserId",
+                    "Invalid user ID"
+                )
+            );
+
         var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
@@ -98,9 +114,14 @@ public static class GamesEndpoints
         var game = dto.FromCreateDto(map, user);
         await gameService.Add(game);
 
-        return TypedResults.Created($"/users/{userId}/games/{game.Id}", game.ToDto());
+        return TypedResults.CreatedAtRoute(
+            game.ToDto(),
+            nameof(GetUserGame),
+            new { userId = userId, id = game.Id }
+        );
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
         Results<
             Ok<GameDto>,
@@ -111,18 +132,18 @@ public static class GamesEndpoints
     > UpdateUserGame(
         int userId,
         int id,
-        UpdateGameDto dto,
-        IValidator<UpdateGameDto> validator,
+        HttpContext httpContext,
         IUserService userService,
         IGameService gameService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var response = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return TypedResults.UnprocessableEntity(response);
-        }
+        if (!httpContext.TryGetJwtUserId(out int playerId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "UserId",
+                    "Invalid user ID"
+                )
+            );
 
         var user = await userService.Get(userId);
         if (user == null)
@@ -139,10 +160,10 @@ public static class GamesEndpoints
                 )
             );
 
-        var player = await userService.Get(dto.PlayerId);
+        var player = await userService.Get(playerId);
         if (player == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("player"));
-        else if (game.Players.Exists(x => x.Id == dto.PlayerId))
+        else if (game.Players.Exists(x => x.Id == playerId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "player",
@@ -155,13 +176,24 @@ public static class GamesEndpoints
         return TypedResults.Ok(game.ToDto());
     }
 
-    public static async Task<Results<NoContent, NotFound<CustomError>>> RemoveUserGame(
-        int userId,
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<
+        Results<NoContent, UnprocessableEntity<CustomError>, NotFound<CustomError>>
+    > RemoveUserGame(
         int id,
+        HttpContext httpContext,
         IUserService userService,
         IGameService gameService
     )
     {
+        if (!httpContext.TryGetJwtUserId(out int userId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "UserId",
+                    "Invalid user ID"
+                )
+            );
+
         var user = await userService.Get(userId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));

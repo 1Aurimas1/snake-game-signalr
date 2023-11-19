@@ -1,4 +1,7 @@
+using System.Linq.Expressions;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
+using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 
@@ -7,46 +10,38 @@ public static class MapsEndpoints
     public static RouteGroupBuilder MapMapsApi(this RouteGroupBuilder group)
     {
         group.MapGet("/maps", GetAllMaps);
-        group.MapPatch("/maps/{id}", PublishMap);
         group.MapGet("/users/{userId}/maps", GetAllUserMaps);
-        group.MapGet("/users/{userId}/maps/{id}", GetUserMap);
+        group.MapGet("/users/{userId}/maps/{id}", GetUserMap).WithName(nameof(GetUserMap));
         group.MapGet("/users/{userId}/tournaments/{tournamentId}/maps", GetAllUserTournamentMaps);
-        group.MapPost("/users/{userId}/maps", CreateUserMap);
-        group.MapPatch("/users/{userId}/maps/{id}", UpdateUserMap);
+        group.MapPost("/maps", CreateUserMap);
+        group.MapPatch("/maps/{id}", UpdateUserMap);
         group.MapDelete("/users/{userId}/maps/{id}", RemoveUserMap);
+        group.MapPatch("/maps/{id}/status", PublishMap);
 
         return group;
     }
 
-    public static async Task<IResult> GetAllMaps(IMapService mapService, bool isPublished = true)
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<IResult> GetAllMaps(
+        HttpContext httpContext,
+        IMapService mapService,
+        bool? isPublished
+    )
     {
-        // TODO: forbidden for basic users
-        List<Map> maps = await mapService.GetAllFiltered(x => x.IsPublished == isPublished);
+        Expression<Func<Map, bool>> predicate;
+        if (httpContext.User.IsInRole(UserRoles.Admin))
+            predicate = isPublished == null ? x => true : x => x.IsPublished == isPublished;
+        else if (httpContext.User.IsInRole(UserRoles.Basic))
+            predicate = x => x.IsPublished;
+        else
+            return Results.Forbid();
+
+        List<Map> maps = await mapService.GetAllFiltered(predicate);
 
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
-    // TODO: forbidden for basic users
-    public static async Task<IResult> PublishMap(int id, IMapService mapService)
-    {
-        var map = await mapService.Get(id);
-        if (map == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
-
-        if (map.IsPublished)
-        {
-            var responseResult = JsonResponseGenerator.GenerateUnprocessableEntityResponse(
-                "mapId",
-                "Map is already published"
-            );
-            return Results.UnprocessableEntity(responseResult);
-        }
-
-        await mapService.Publish(map);
-
-        return Results.Ok(map.ToDto());
-    }
-
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetAllUserMaps(
         int userId,
         IUserService userService,
@@ -62,6 +57,7 @@ public static class MapsEndpoints
         return Results.Ok(maps.Select(x => x.ToDto()));
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetUserMap(
         int userId,
         int id,
@@ -80,6 +76,7 @@ public static class MapsEndpoints
         return Results.Ok(map.ToDto());
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> GetAllUserTournamentMaps(
         int userId,
         int tournamentId,
@@ -102,8 +99,9 @@ public static class MapsEndpoints
         return Results.Ok(mapsDtos);
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> CreateUserMap(
-        int userId,
+        HttpContext httpContext,
         CreateMapDto dto,
         IValidator<CreateMapDto> validator,
         IUserService userService,
@@ -117,18 +115,31 @@ public static class MapsEndpoints
             return Results.UnprocessableEntity(responseResult);
         }
 
+        if (!httpContext.TryGetJwtUserId(out int userId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "userId",
+                    "Invalid user ID"
+                )
+            );
+
         var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
         var map = await mapService.Add(dto, user);
 
-        return Results.Created($"/maps/{map.Id}", map.ToDto());
+        return TypedResults.CreatedAtRoute(
+            map.ToDto(),
+            nameof(GetUserMap),
+            new { userId = userId, id = map.Id }
+        );
     }
 
+    [Authorize(Roles = UserRoles.Basic)]
     public static async Task<IResult> UpdateUserMap(
-        int userId,
         int id,
+        HttpContext httpContext,
         UpdateMapDto dto,
         IValidator<UpdateMapDto> validator,
         IUserService userService,
@@ -142,6 +153,14 @@ public static class MapsEndpoints
             return Results.UnprocessableEntity(response);
         }
 
+        if (!httpContext.TryGetJwtUserId(out int userId))
+            return TypedResults.UnprocessableEntity(
+                JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                    "userId",
+                    "Invalid user ID"
+                )
+            );
+
         var user = await userService.Get(userId);
         if (user == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
@@ -150,11 +169,12 @@ public static class MapsEndpoints
         if (map == null)
             return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
 
-        await mapService.Update(map, dto);
+        await mapService.Update(map, dto, userId);
 
         return Results.Ok(map.ToDto());
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     public static async Task<IResult> RemoveUserMap(
         int userId,
         int id,
@@ -173,5 +193,26 @@ public static class MapsEndpoints
         await mapService.Remove(map);
 
         return Results.NoContent();
+    }
+
+    [Authorize(Roles = UserRoles.Admin)]
+    public static async Task<IResult> PublishMap(int id, IMapService mapService)
+    {
+        var map = await mapService.Get(id);
+        if (map == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
+
+        if (map.IsPublished)
+        {
+            var responseResult = JsonResponseGenerator.GenerateUnprocessableEntityResponse(
+                "mapId",
+                "Map is already published"
+            );
+            return Results.UnprocessableEntity(responseResult);
+        }
+
+        await mapService.Publish(map);
+
+        return Results.Ok(map.ToDto());
     }
 }

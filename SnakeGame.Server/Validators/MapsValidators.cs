@@ -42,15 +42,5 @@ public class UpdateMapDtoValidator : AbstractValidator<UpdateMapDto>
     public UpdateMapDtoValidator(DataContext dbContext)
     {
         RuleFor(x => x.MapRating).NotEmpty().NotNull().InclusiveBetween(1, 5);
-        RuleFor(x => x.UserId)
-            .NotEmpty()
-            .NotNull()
-            .Must((userId) => DoesUserExist(dbContext, userId))
-            .WithMessage("The user was not found.");
-    }
-
-    private bool DoesUserExist(DataContext dbContext, int userId)
-    {
-        return dbContext.Users.Any(x => x.Id == userId);
     }
 }

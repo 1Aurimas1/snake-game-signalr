@@ -10,11 +10,3 @@ public class CreateGameDtoValidator : AbstractValidator<CreateGameDto>
         RuleFor(x => x.MapId).NotNull();
     }
 }
-
-public class UpdateGameDtoValidator : AbstractValidator<UpdateGameDto>
-{
-    public UpdateGameDtoValidator()
-    {
-        RuleFor(x => x.PlayerId).NotEmpty();
-    }
-}

@@ -96,7 +96,7 @@ public static class AuthEndpoints
     {
         if (!jwtTokenService.TryParseRefreshToken(dto.RefreshToken, out var claims))
         {
-            return Results.UnprocessableEntity();
+            return Results.UnprocessableEntity("Couldn't parse refresh token");
         }
 
         var userId = claims.FindFirstValue(JwtRegisteredClaimNames.Sub);
