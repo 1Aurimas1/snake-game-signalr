@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using SnakeGame.Server.Services.DataServices;
-using SnakeGame.Server.Validators;
+using SnakeGame.Server.Validators.UsersValidators;
 
 public class UsersInMemoryTests
 {
@@ -84,18 +84,28 @@ public class UsersInMemoryTests
             .Setup(m => m.UpdateAsync(It.IsAny<User>()))
             .ReturnsAsync(IdentityResult.Success);
 
+        var httpContext = HttpContextHelper.CreateHttpContext(
+            id,
+            new List<string> { UserRoles.Basic }
+        );
         UserService userService = new(mockUserManager.Object);
 
         var updateUserDto = new UpdateUserDto { UserName = newName, Email = newEmail };
         UpdateUserDtoValidator validator = new(mockUserManager.Object);
 
-        var result = await UsersEndpoints.UpdateUser(id, updateUserDto, validator, userService);
+        var result = await UsersEndpoints.UpdateUser(
+            //id,
+            httpContext,
+            updateUserDto,
+            validator,
+            userService
+        );
 
         Assert.IsType<
             Results<
                 Ok<UserDto>,
                 UnprocessableEntity<IEnumerable<CustomError>>,
-                UnprocessableEntity<string>,
+                UnprocessableEntity<CustomError>,
                 NotFound<CustomError>
             >
         >(result);

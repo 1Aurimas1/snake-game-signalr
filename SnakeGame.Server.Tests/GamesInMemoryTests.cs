@@ -130,6 +130,10 @@ public class GamesInMemoryTests
             .Setup(m => m.FindByIdAsync(userId.ToString()))
             .ReturnsAsync(context.Users.FirstOrDefault(u => u.Id == userId));
 
+        var httpContext = HttpContextHelper.CreateHttpContext(
+            userId,
+            new List<string> { UserRoles.Basic }
+        );
         UserService userService = new(mockUserManager.Object);
         MapService mapService = new(context);
         GameService gameService = new(context);
@@ -140,9 +144,9 @@ public class GamesInMemoryTests
         var initialGameCount = context.Games.Count();
 
         var result = await GamesEndpoints.CreateUserGame(
-            userId,
             createGameDto,
             validator,
+            httpContext,
             userService,
             mapService,
             gameService
@@ -150,16 +154,17 @@ public class GamesInMemoryTests
 
         Assert.IsType<
             Results<
-                Created<GameDto>,
+                CreatedAtRoute<GameDto>,
                 UnprocessableEntity<IEnumerable<CustomError>>,
+                UnprocessableEntity<CustomError>,
                 NotFound<CustomError>
             >
         >(result);
 
-        var createdResult = (Created<GameDto>)result.Result;
+        var createdResult = (CreatedAtRoute<GameDto>)result.Result;
 
         Assert.NotNull(createdResult);
-        Assert.NotNull(createdResult.Location);
+        Assert.NotNull(createdResult.RouteName);
 
         var lastGame = context.Games.Last();
         var gameDiff = context.Games.Count() - initialGameCount;
@@ -185,19 +190,19 @@ public class GamesInMemoryTests
                 (string arg) => context.Users.FirstOrDefault(u => u.Id == int.Parse(arg))
             );
 
+        var httpContext = HttpContextHelper.CreateHttpContext(
+            playerId,
+            new List<string> { UserRoles.Basic }
+        );
         UserService userService = new(mockUserManager.Object);
         GameService gameService = new(context);
 
         var initialPlayerCount = context.Games.Single(g => g.Id == id).Players.Count();
 
-        UpdateGameDto updateGameDto = new(playerId);
-        UpdateGameDtoValidator validator = new();
-
         var result = await GamesEndpoints.UpdateUserGame(
             userId,
             id,
-            updateGameDto,
-            validator,
+            httpContext,
             userService,
             gameService
         );
@@ -235,14 +240,20 @@ public class GamesInMemoryTests
             .Setup(m => m.FindByIdAsync(userId.ToString()))
             .ReturnsAsync(context.Users.FirstOrDefault(u => u.Id == userId));
 
+        var httpContext = HttpContextHelper.CreateHttpContext(
+            userId,
+            new List<string> { UserRoles.Basic }
+        );
         UserService userService = new(mockUserManager.Object);
         GameService gameService = new(context);
 
         var initialGameCount = context.Games.Count();
 
-        var result = await GamesEndpoints.RemoveUserGame(userId, id, userService, gameService);
+        var result = await GamesEndpoints.RemoveUserGame(id, httpContext, userService, gameService);
 
-        Assert.IsType<Results<NoContent, NotFound<CustomError>>>(result);
+        Assert.IsType<Results<NoContent, UnprocessableEntity<CustomError>, NotFound<CustomError>>>(
+            result
+        );
 
         var noContentResult = (NoContent)result.Result;
 
