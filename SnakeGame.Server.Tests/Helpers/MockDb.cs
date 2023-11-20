@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SnakeGame.Server.Data;
 using SnakeGame.Server.Models;
 
-namespace UnitTests.Helpers;
+namespace SnakeGame.Tests.Helpers;
 
 public class MockDb : IDbContextFactory<DataContext>
 {

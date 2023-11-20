@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 
+namespace SnakeGame.Tests.Helpers;
+
 public class HttpContextHelper
 {
     public static HttpContext CreateHttpContext(int userId, IEnumerable<string> roles)

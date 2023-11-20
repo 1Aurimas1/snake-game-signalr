@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Moq;
 
+namespace SnakeGame.Tests.Helpers;
+
 public static class MockUserManager
 {
     public static Mock<UserManager<TUser>> GetUserManager<TUser>()

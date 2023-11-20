@@ -1,8 +1,8 @@
 using SnakeGame.Server.Models;
-using UnitTests.Helpers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Moq;
 using SnakeGame.Server.Services.DataServices;
+using SnakeGame.Tests.Helpers;
 
 public class GamesInMemoryTests
 {
@@ -139,13 +139,11 @@ public class GamesInMemoryTests
         GameService gameService = new(context);
 
         CreateGameDto createGameDto = new(name, mode, mapId);
-        CreateGameDtoValidator validator = new(context);
 
         var initialGameCount = context.Games.Count();
 
         var result = await GamesEndpoints.CreateUserGame(
             createGameDto,
-            validator,
             httpContext,
             userService,
             mapService,
@@ -155,7 +153,6 @@ public class GamesInMemoryTests
         Assert.IsType<
             Results<
                 CreatedAtRoute<GameDto>,
-                UnprocessableEntity<IEnumerable<CustomError>>,
                 UnprocessableEntity<CustomError>,
                 NotFound<CustomError>
             >
@@ -210,7 +207,6 @@ public class GamesInMemoryTests
         Assert.IsType<
             Results<
                 Ok<GameDto>,
-                UnprocessableEntity<IEnumerable<CustomError>>,
                 UnprocessableEntity<CustomError>,
                 NotFound<CustomError>
             >
