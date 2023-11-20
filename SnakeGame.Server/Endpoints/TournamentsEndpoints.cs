@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using SnakeGame.Server.Filters;
 using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
@@ -14,8 +15,12 @@ public static class TournamentsEndpoints
         group
             .MapGet("/users/{userId}/tournaments/{id}", GetUserTournament)
             .WithName(nameof(GetUserTournament));
-        group.MapPost("/tournaments", CreateUserTournament);
-        group.MapPatch("/users/{userId}/tournaments/{id}", UpdateUserTournament);
+        group
+            .MapPost("/tournaments", CreateUserTournament)
+            .AddEndpointFilter<ValidationFilter<CreateTournamentDto>>();
+        group
+            .MapPatch("/users/{userId}/tournaments/{id}", UpdateUserTournament)
+            .AddEndpointFilter<ValidationFilter<UpdateTournamentDto>>();
         group.MapDelete("/users/{userId}/tournaments/{id}", RemoveUserTournament);
         // Rounds
         group.MapGet(
@@ -74,18 +79,10 @@ public static class TournamentsEndpoints
     public static async Task<IResult> CreateUserTournament(
         HttpContext httpContext,
         CreateTournamentDto dto,
-        IValidator<CreateTournamentDto> validator,
         IUserService userService,
         ITournamentService tournamentService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(responseResult);
-        }
-
         if (!httpContext.TryGetJwtUserId(out int userId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
@@ -112,7 +109,6 @@ public static class TournamentsEndpoints
         int userId,
         int id,
         HttpContext httpContext,
-        IValidator<UpdateTournamentDto> validator,
         IUserService userService,
         ITournamentService tournamentService
     )

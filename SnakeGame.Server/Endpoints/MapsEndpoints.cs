@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using SnakeGame.Server.Filters;
 using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
@@ -13,8 +14,10 @@ public static class MapsEndpoints
         group.MapGet("/users/{userId}/maps", GetAllUserMaps);
         group.MapGet("/users/{userId}/maps/{id}", GetUserMap).WithName(nameof(GetUserMap));
         group.MapGet("/users/{userId}/tournaments/{tournamentId}/maps", GetAllUserTournamentMaps);
-        group.MapPost("/maps", CreateUserMap);
-        group.MapPatch("/maps/{id}", UpdateUserMap);
+        group.MapPost("/maps", CreateUserMap).AddEndpointFilter<ValidationFilter<CreateMapDto>>();
+        group
+            .MapPatch("/maps/{id}", UpdateUserMap)
+            .AddEndpointFilter<ValidationFilter<UpdateMapDto>>();
         group.MapDelete("/users/{userId}/maps/{id}", RemoveUserMap);
         group.MapPatch("/maps/{id}/status", PublishMap);
 
@@ -103,18 +106,10 @@ public static class MapsEndpoints
     public static async Task<IResult> CreateUserMap(
         HttpContext httpContext,
         CreateMapDto dto,
-        IValidator<CreateMapDto> validator,
         IUserService userService,
         IMapService mapService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(responseResult);
-        }
-
         if (!httpContext.TryGetJwtUserId(out int userId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
@@ -141,18 +136,10 @@ public static class MapsEndpoints
         int id,
         HttpContext httpContext,
         UpdateMapDto dto,
-        IValidator<UpdateMapDto> validator,
         IUserService userService,
         IMapService mapService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var response = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return Results.UnprocessableEntity(response);
-        }
-
         if (!httpContext.TryGetJwtUserId(out int userId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(

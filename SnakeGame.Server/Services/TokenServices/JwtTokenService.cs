@@ -4,6 +4,8 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
+namespace SnakeGame.Server.Services.TokenServices;
+
 public class JwtTokenService
 {
     private readonly SymmetricSecurityKey _authSigningKey;

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
+using SnakeGame.Server.Filters;
 using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
@@ -13,7 +14,9 @@ public static class GamesEndpoints
         group.MapGet("/games/open", GetAllOpenGames);
         group.MapGet("/users/{userId}/games", GetAllUserGames);
         group.MapGet("/users/{userId}/games/{id}", GetUserGame).WithName(nameof(GetUserGame));
-        group.MapPost("/games", CreateUserGame);
+        group
+            .MapPost("/games", CreateUserGame)
+            .AddEndpointFilter<ValidationFilter<CreateGameDto>>();
         group.MapPatch("/users/{userId}/games/{id}", UpdateUserGame);
         group.MapDelete("/games/{id}", RemoveUserGame);
 
@@ -73,28 +76,15 @@ public static class GamesEndpoints
 
     [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
-        Results<
-            CreatedAtRoute<GameDto>,
-            UnprocessableEntity<IEnumerable<CustomError>>,
-            UnprocessableEntity<CustomError>,
-            NotFound<CustomError>
-        >
+        Results<CreatedAtRoute<GameDto>, UnprocessableEntity<CustomError>, NotFound<CustomError>>
     > CreateUserGame(
         CreateGameDto dto,
-        IValidator<CreateGameDto> validator,
         HttpContext httpContext,
         IUserService userService,
         IMapService mapService,
         IGameService gameService
     )
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return TypedResults.UnprocessableEntity(responseResult);
-        }
-
         if (!httpContext.TryGetJwtUserId(out int userId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
@@ -123,12 +113,7 @@ public static class GamesEndpoints
 
     [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
-        Results<
-            Ok<GameDto>,
-            UnprocessableEntity<IEnumerable<CustomError>>,
-            UnprocessableEntity<CustomError>,
-            NotFound<CustomError>
-        >
+        Results<Ok<GameDto>, UnprocessableEntity<CustomError>, NotFound<CustomError>>
     > UpdateUserGame(
         int userId,
         int id,

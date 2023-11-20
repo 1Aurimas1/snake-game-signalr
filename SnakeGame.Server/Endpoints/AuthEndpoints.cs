@@ -3,6 +3,7 @@ using System.Security.Claims;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using SnakeGame.Server.Models;
+using SnakeGame.Server.Services.TokenServices;
 
 public static class AuthEndpoints
 {

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
+using SnakeGame.Server.Services.TokenServices;
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 

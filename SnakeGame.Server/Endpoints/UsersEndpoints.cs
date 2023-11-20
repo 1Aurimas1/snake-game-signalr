@@ -1,6 +1,6 @@
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
+using SnakeGame.Server.Filters;
 using SnakeGame.Server.Helpers;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
@@ -11,7 +11,9 @@ public static class UsersEndpoints
     {
         group.MapGet("/users", GetAllUsers);
         group.MapGet("/users/{id}", GetUser);
-        group.MapPatch("/users/{id}", UpdateUser);
+        group
+            .MapPatch("/users/{id}", UpdateUser)
+            .AddEndpointFilter<ValidationFilter<UpdateUserDto>>();
         group.MapDelete("/users/{id}", RemoveUser);
 
         return group;
@@ -40,26 +42,9 @@ public static class UsersEndpoints
 
     [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
-        Results<
-            Ok<UserDto>,
-            UnprocessableEntity<IEnumerable<CustomError>>,
-            UnprocessableEntity<CustomError>,
-            NotFound<CustomError>
-        >
-    > UpdateUser(
-        HttpContext httpContext,
-        UpdateUserDto dto,
-        IValidator<UpdateUserDto> validator,
-        IUserService userService
-    )
+        Results<Ok<UserDto>, UnprocessableEntity<CustomError>, NotFound<CustomError>>
+    > UpdateUser(HttpContext httpContext, UpdateUserDto dto, IUserService userService)
     {
-        var result = await validator.ValidateAsync(dto);
-        if (!result.IsValid)
-        {
-            var responseResult = JsonResponseGenerator.GenerateFluentErrorResponse(result.Errors);
-            return TypedResults.UnprocessableEntity(responseResult);
-        }
-
         if (!httpContext.TryGetJwtUserId(out int id))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
