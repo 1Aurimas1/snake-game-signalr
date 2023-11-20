@@ -59,10 +59,22 @@ public class UpdateUserDtoValidator : BaseUserDtoValidator<UpdateUserDto>
 
 public class LoginUserDtoValidator : AbstractValidator<LoginUserDto>
 {
-    public LoginUserDtoValidator(UserManager<User> userManager)
+    public LoginUserDtoValidator()
     {
         RuleFor(x => x.UserName).ValidateUsernameBasic();
         RuleFor(x => x.Password).ValidatePasswordBasic();
+    }
+}
+
+public class ChangePasswordDtoValidator : AbstractValidator<ChangePasswordDto>
+{
+    public ChangePasswordDtoValidator()
+    {
+        RuleFor(x => x.OldPassword).ValidatePasswordBasic();
+        RuleFor(x => x.NewPassword)
+            .ValidatePasswordBasic()
+            .Must((model, field) => field == model.NewPasswordConfirmation)
+            .WithMessage("Passwords must match");
     }
 }
 

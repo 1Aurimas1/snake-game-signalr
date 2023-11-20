@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using SnakeGame.Server.Auth.Services.TokenServices;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
-using SnakeGame.Server.Services.TokenServices;
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
@@ -27,7 +27,7 @@ builder.Services.AddTransient<ITournamentService, TournamentService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-builder.Services.AddTransient<JwtTokenService>();
+builder.Services.AddTransient<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services

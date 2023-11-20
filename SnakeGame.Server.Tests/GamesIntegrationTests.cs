@@ -3,10 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SnakeGame.Server.Models;
-using SnakeGame.Server.Services.TokenServices;
+using SnakeGame.Server.Auth.Services.TokenServices;
 using SnakeGame.Tests.Helpers;
 
 public class GamesIntegrationTests
@@ -23,10 +22,11 @@ public class GamesIntegrationTests
     {
         await using var application = new SnakeGameApplication();
         using var client = application.CreateClient();
+        using var scope = application.Services.CreateScope();
 
-        var configuration = application.Services.GetRequiredService<IConfiguration>();
+        var jwtTokenService = scope.ServiceProvider.GetRequiredService<IJwtTokenService>();
 
-        var accessToken = new JwtTokenService(configuration).CreateAccessToken(
+        var accessToken = jwtTokenService.CreateAccessToken(
             name,
             userId.ToString(),
             new List<string> { UserRoles.Basic }

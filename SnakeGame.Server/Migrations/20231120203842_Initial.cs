@@ -224,6 +224,27 @@ namespace SnakeGame.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RevokedJwtTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    RefreshToken = table.Column<string>(type: "text", nullable: false),
+                    ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RevokedJwtTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RevokedJwtTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tournaments",
                 columns: table => new
                 {
@@ -499,6 +520,11 @@ namespace SnakeGame.Server.Migrations
                 column: "ObstacleId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RevokedJwtTokens_UserId",
+                table: "RevokedJwtTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Rounds_MapId",
                 table: "Rounds",
                 column: "MapId");
@@ -582,6 +608,9 @@ namespace SnakeGame.Server.Migrations
 
             migrationBuilder.DropTable(
                 name: "Participations");
+
+            migrationBuilder.DropTable(
+                name: "RevokedJwtTokens");
 
             migrationBuilder.DropTable(
                 name: "Rounds");

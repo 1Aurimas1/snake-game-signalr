@@ -18,9 +18,17 @@ public class User : IdentityUser<int>
 }
 
 public record SuccessfulLoginDto(string AccessToken, string RefreshToken);
+
+public record ChangePasswordDto(
+    string OldPassword,
+    string NewPassword,
+    string NewPasswordConfirmation
+);
+
 public record RefreshAccessTokenDto(string RefreshToken);
 
 public record UserDto(int Id, string UserName);
+
 public record LoginUserDto(string UserName, string Password);
 
 public class BaseUserDto
@@ -43,10 +51,6 @@ public static class UserMapper
 
     public static User FromRegisterDto(this RegisterUserDto dto)
     {
-        return new User
-        {
-            UserName = dto.UserName,
-            Email = dto.Email,
-        };
+        return new User { UserName = dto.UserName, Email = dto.Email, };
     }
 }

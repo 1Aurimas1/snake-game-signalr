@@ -43,6 +43,13 @@ public static class JsonResponseGenerator
         return error;
     }
 
+    public static CustomError GenerateForbidResponse()
+    {
+        var error = new CustomError("", "Forbidden", "");
+
+        return error;
+    }
+
     public static CustomError GenerateExceptionResponse(string exception, string exceptionMessage)
     {
         string propertyName = GetPropertyName(exceptionMessage);

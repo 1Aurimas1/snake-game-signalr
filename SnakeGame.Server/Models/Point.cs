@@ -1,3 +1,5 @@
+namespace SnakeGame.Server.Models;
+
 public class Point
 {
     public int Id { get; set; }

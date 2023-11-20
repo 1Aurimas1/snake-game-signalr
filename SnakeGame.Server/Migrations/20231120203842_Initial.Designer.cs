@@ -12,7 +12,7 @@ using SnakeGame.Server.Data;
 namespace SnakeGame.Server.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20231109123754_Initial")]
+    [Migration("20231120203842_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -24,32 +24,6 @@ namespace SnakeGame.Server.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("MapRating", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MapId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MapId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("MapRatings");
-                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
                 {
@@ -244,7 +218,7 @@ namespace SnakeGame.Server.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Participation", b =>
+            modelBuilder.Entity("SnakeGame.Server.Auth.Models.RevokedJwtToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -252,43 +226,21 @@ namespace SnakeGame.Server.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("TournamentId")
-                        .HasColumnType("integer");
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TournamentId");
-
                     b.HasIndex("UserId");
 
-                    b.ToTable("Participations");
-                });
-
-            modelBuilder.Entity("Point", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("ObstacleId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("X")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Y")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ObstacleId");
-
-                    b.ToTable("Points");
+                    b.ToTable("RevokedJwtTokens");
                 });
 
             modelBuilder.Entity("SnakeGame.Server.Models.Game", b =>
@@ -380,6 +332,32 @@ namespace SnakeGame.Server.Migrations
                     b.ToTable("MapObstacles");
                 });
 
+            modelBuilder.Entity("SnakeGame.Server.Models.MapRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MapId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MapId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MapRatings");
+                });
+
             modelBuilder.Entity("SnakeGame.Server.Models.Obstacle", b =>
                 {
                     b.Property<int>("Id")
@@ -391,6 +369,53 @@ namespace SnakeGame.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Obstacles");
+                });
+
+            modelBuilder.Entity("SnakeGame.Server.Models.Participation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("TournamentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TournamentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Participations");
+                });
+
+            modelBuilder.Entity("SnakeGame.Server.Models.Point", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ObstacleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("X")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Y")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObstacleId");
+
+                    b.ToTable("Points");
                 });
 
             modelBuilder.Entity("SnakeGame.Server.Models.Round", b =>
@@ -528,25 +553,6 @@ namespace SnakeGame.Server.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("MapRating", b =>
-                {
-                    b.HasOne("SnakeGame.Server.Models.Map", "Map")
-                        .WithMany("MapRatings")
-                        .HasForeignKey("MapId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SnakeGame.Server.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Map");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<int>", null)
@@ -598,30 +604,15 @@ namespace SnakeGame.Server.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Participation", b =>
+            modelBuilder.Entity("SnakeGame.Server.Auth.Models.RevokedJwtToken", b =>
                 {
-                    b.HasOne("SnakeGame.Server.Models.Tournament", "Tournament")
-                        .WithMany("Participations")
-                        .HasForeignKey("TournamentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("SnakeGame.Server.Models.User", "User")
-                        .WithMany("Participations")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Tournament");
-
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Point", b =>
-                {
-                    b.HasOne("SnakeGame.Server.Models.Obstacle", null)
-                        .WithMany("Points")
-                        .HasForeignKey("ObstacleId");
                 });
 
             modelBuilder.Entity("SnakeGame.Server.Models.Game", b =>
@@ -668,7 +659,7 @@ namespace SnakeGame.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Point", "Position")
+                    b.HasOne("SnakeGame.Server.Models.Point", "Position")
                         .WithMany()
                         .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -679,6 +670,51 @@ namespace SnakeGame.Server.Migrations
                     b.Navigation("Obstacle");
 
                     b.Navigation("Position");
+                });
+
+            modelBuilder.Entity("SnakeGame.Server.Models.MapRating", b =>
+                {
+                    b.HasOne("SnakeGame.Server.Models.Map", "Map")
+                        .WithMany("MapRatings")
+                        .HasForeignKey("MapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SnakeGame.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Map");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SnakeGame.Server.Models.Participation", b =>
+                {
+                    b.HasOne("SnakeGame.Server.Models.Tournament", "Tournament")
+                        .WithMany("Participations")
+                        .HasForeignKey("TournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SnakeGame.Server.Models.User", "User")
+                        .WithMany("Participations")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tournament");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SnakeGame.Server.Models.Point", b =>
+                {
+                    b.HasOne("SnakeGame.Server.Models.Obstacle", null)
+                        .WithMany("Points")
+                        .HasForeignKey("ObstacleId");
                 });
 
             modelBuilder.Entity("SnakeGame.Server.Models.Round", b =>

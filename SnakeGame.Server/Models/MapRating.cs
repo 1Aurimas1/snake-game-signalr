@@ -1,4 +1,4 @@
-using SnakeGame.Server.Models;
+namespace SnakeGame.Server.Models;
 
 public class MapRating
 {

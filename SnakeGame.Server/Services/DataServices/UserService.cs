@@ -5,10 +5,15 @@ namespace SnakeGame.Server.Services.DataServices;
 
 public interface IUserService
 {
+    Task<IdentityResult> ChangePassword(User user, string oldPassword, string newPassword);
     Task<User?> Get(int id);
     Task<List<User>> GetAll();
-    Task<IdentityResult> Update(User user, UpdateUserDto dto);
+    Task<User?> GetByName(string userName);
+    Task<(User user, IList<string> roles)?> Login(string userName, string password);
+    Task<bool> Register(User user, string password);
     Task<IdentityResult> Remove(User user);
+    Task<IdentityResult> Update(User user, UpdateUserDto dto);
+    Task UpdateForceRelogin(User user, bool toRelog);
 }
 
 public class UserService : IUserService
@@ -28,6 +33,11 @@ public class UserService : IUserService
     public async Task<User?> Get(int id)
     {
         return await _userManager.FindByIdAsync(id.ToString());
+    }
+
+    public async Task<User?> GetByName(string userName)
+    {
+        return await _userManager.FindByNameAsync(userName);
     }
 
     public async Task<IdentityResult> Update(User user, UpdateUserDto dto)
@@ -52,5 +62,49 @@ public class UserService : IUserService
     public async Task<IdentityResult> Remove(User user)
     {
         return await _userManager.DeleteAsync(user);
+    }
+
+    public async Task<bool> Register(User user, string password)
+    {
+        var userResult = await _userManager.CreateAsync(user, password);
+        // TODO: userResult.errors
+        if (!userResult.Succeeded)
+            return false;
+
+        var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Basic);
+        if (!roleResult.Succeeded)
+            return false;
+
+        return true;
+    }
+
+    public async Task UpdateForceRelogin(User user, bool toRelog)
+    {
+        user.ForceRelogin = toRelog;
+        await _userManager.UpdateAsync(user);
+    }
+
+    public async Task<(User user, IList<string> roles)?> Login(string userName, string password)
+    {
+        var user = await _userManager.FindByNameAsync(userName);
+        if (user == null)
+            return null;
+
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, password);
+        if (!isPasswordValid)
+            return null;
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return (user, roles);
+    }
+
+    public async Task<IdentityResult> ChangePassword(
+        User user,
+        string oldPassword,
+        string newPassword
+    )
+    {
+        return await _userManager.ChangePasswordAsync(user, oldPassword, newPassword);
     }
 }
