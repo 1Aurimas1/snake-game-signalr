@@ -1,6 +1,6 @@
 import { FieldValues, RegisterOptions, useFormContext } from "react-hook-form";
 import { getInputErrorMessage } from "../utils/findInputError";
-import { ServerError } from "../shared/interfaces/ServerError";
+import { ApiErrorResponse } from "../shared/interfaces/ApiResponse";
 import { useEffect } from "react";
 
 interface Props {
@@ -10,62 +10,69 @@ interface Props {
   id: string;
   placeholder: string;
   validation?: RegisterOptions<FieldValues, string>;
-  serverError: ServerError[];
+  apiErrorResponse: ApiErrorResponse | null;
 }
 
 const InputError = ({ message }: { message: string }) => {
   return (
-    <p className="rounded-md bg-red-100 px-2 font-semibold text-red-500">
+    <p className="whitespace-pre-wrap rounded-md bg-red-100 px-2 font-semibold text-red-500">
       {message}
     </p>
   );
 };
 
-export const Input = ({
-  name,
-  label,
-  type,
-  id,
-  placeholder,
-  validation,
-  serverError,
-}: Props) => {
+export const Input = (props: Props) => {
   const {
     register,
     setError,
     formState: { errors },
   } = useFormContext();
 
-  const inputErrors = getInputErrorMessage(errors, name);
+  const inputErrors = getInputErrorMessage(errors, props.name);
 
   useEffect(() => {
-    if (serverError) {
-      for (const err of serverError) {
-        const field = err.field.toLowerCase();
-        if (field === name) {
-          setError(field, {
-            type: "server",
-            message: err.message,
-          });
+    if (props.apiErrorResponse) {
+      let errorMessage = "";
+
+      if (Array.isArray(props.apiErrorResponse)) {
+        for (const err of props.apiErrorResponse) {
+          const fieldLower = err.propertyName.toLowerCase();
+          const messageLower = err.errorMessage.toLowerCase();
+
+          if (
+            fieldLower.includes(props.name) ||
+            messageLower.includes(props.name)
+          ) {
+            errorMessage += `${err.errorMessage}\n`;
+          }
         }
+      } else {
+        errorMessage = props.apiErrorResponse.errorMessage;
+      }
+
+      if (errorMessage) {
+        setError(props.name, {
+          type: "server",
+          message: errorMessage,
+        });
       }
     }
-  }, [serverError]);
+  }, [props.apiErrorResponse, setError]);
 
   return (
     <div className="flex w-72 flex-col gap-2">
       <div>
-        <label htmlFor={id} className="font-semibold capitalize">
-          {label}
+        <label htmlFor={props.id} className="font-semibold capitalize">
+          {props.label}
         </label>
         {inputErrors && <InputError message={inputErrors} key={inputErrors} />}
       </div>
       <input
-        id={id}
-        type={type}
+        id={props.id}
+        type={props.type}
         className="rounded-md border-2 p-3 font-medium placeholder:opacity-50"
-        placeholder={placeholder}
-        {...register(name, validation)}
+        placeholder={props.placeholder}
+        {...register(props.name, props.validation)}
       />
     </div>
   );

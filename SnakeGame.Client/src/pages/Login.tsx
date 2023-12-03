@@ -7,20 +7,17 @@ import {
   passwordValidation,
   usernameValidation,
 } from "../utils/inputValidations";
-import { ServerError } from "../shared/interfaces/ServerError";
+import { ApiErrorResponse } from "../shared/interfaces/ApiError";
 import logo from "../assets/snake_64_bw.png";
 import Button from "../components/Button";
+import SuccessfulLoginDto from "../shared/interfaces/SuccessfulLoginDto";
+import { useFetch } from "../hooks/useFetch";
 
 interface State {
   isRegistrationSuccessful: boolean;
 }
 
-interface FormInput {
-  username: string;
-  password: string;
-}
-
-interface UserDto {
+interface LoginUserDto {
   username: string;
   password: string;
 }
@@ -29,57 +26,30 @@ export const Login = () => {
   const { login } = useAuth();
   const location = useLocation();
 
-  const methods = useForm<FormInput>();
-  const [serverErrors, setServerErrors] = useState<ServerError[]>([]);
-  const isLoginSuccessful = useRef(false);
+  const methods = useForm<LoginUserDto>();
+  const [apiError, setApiError] = useState<ApiErrorResponse | null>(null);
+  //const isLoginSuccessful = useRef(false);
 
-  async function loginUser(credentials: UserDto) {
-    return await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const err = await res.json();
+  const onSubmit = async (loginUserDto: LoginUserDto) => {
+    const { apiData, apiError } = await useFetch(
+      "/login",
+      { method: "POST" },
+      loginUserDto,
+    );
+    //await loginUser(loginUserDto);
+    //console.log(apiData);
 
-          const errs: ServerError[] = [];
-          for (const field in err) {
-            const messages = err[field];
+    //const loginDto: SuccessfulLoginDto = await loginUser(loginUserDto);
 
-            for (const message of messages) {
-              errs.push({ field, message });
-              break; // only single message per field is displayed
-            }
-          }
-          setServerErrors(errs);
-
-          return await Promise.reject(err);
-        }
-
-        isLoginSuccessful.current = true;
-        return res.text();
-      })
-      .then((data) => {
-        return data;
-      })
-      .catch((e) => {
-        console.error("User login fetch error: ", e);
-        return null;
-      });
-  }
-
-  const onSubmit = methods.handleSubmit(async (formInput) => {
-    const token = await loginUser(formInput);
-
-    if (isLoginSuccessful.current && token) {
-      sessionStorage.setItem("username", formInput.username);
+    //if (isLoginSuccessful.current && loginDto) {
+    if (apiError) {
+      setApiError(apiError);
+    } else {
+      //sessionStorage.setItem("username", formInput.username);
       methods.reset();
-      login(token);
+      login({ ...apiData } as SuccessfulLoginDto);
     }
-  });
+  };
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -94,14 +64,14 @@ export const Login = () => {
       )}
       <FormProvider {...methods}>
         <form
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={methods.handleSubmit(onSubmit)}
           noValidate
           autoComplete="off"
           className="flex flex-col items-center gap-5"
         >
-          <Input {...usernameValidation} serverError={serverErrors} />
-          <Input {...passwordValidation} serverError={serverErrors} />
-          <Button onClick={onSubmit} >Log In</Button>
+          <Input {...usernameValidation} apiErrorResponse={apiError} />
+          <Input {...passwordValidation} apiErrorResponse={apiError} />
+          <Button type="submit">Log In</Button>
         </form>
       </FormProvider>
       <p>

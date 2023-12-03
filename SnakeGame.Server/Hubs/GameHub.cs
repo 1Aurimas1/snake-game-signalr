@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using SnakeGame.Server.Models;
 
 namespace SnakeGame.Server.Services.GameService;
 
-[Authorize]
+[Authorize(Roles = UserRoles.Basic)]
 public class GameHub : Hub<IGameClient>
 {
     private readonly GameManager _gameManager;
@@ -23,7 +24,7 @@ public class GameHub : Hub<IGameClient>
         return await Task.Run(() => new Tuple<int, int>(Grid.Rows, Grid.Cols));
     }
 
-    public async Task SendInput(string gameRoomId, string playerName, Direction direction)
+    public async Task SendUserInput(string gameRoomId, string playerName, Direction direction)
     {
         await Task.Run(
             () => _gameManager.UpdatePlayerMovePosition(gameRoomId, playerName, direction)

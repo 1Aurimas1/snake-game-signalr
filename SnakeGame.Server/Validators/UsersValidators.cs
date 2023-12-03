@@ -35,7 +35,7 @@ public class RegisterUserDtoValidator : BaseUserDtoValidator<RegisterUserDto>
         : base(userManager)
     {
         RuleFor(x => x.UserName).ValidateUsernameFull(IsNameUnique);
-        RuleFor(x => x.Email).ValidateUsernameFull(IsEmailUnique);
+        RuleFor(x => x.Email).ValidateEmail(IsEmailUnique);
         RuleFor(x => x.Password)
             .ValidatePasswordBasic()
             .Must((model, field) => field == model.PasswordConfirmation)

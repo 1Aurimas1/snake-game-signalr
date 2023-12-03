@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using SnakeGame.Server.Auth.Services.TokenServices;
 using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
+using SnakeGame.Server.Services.GameService;
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
@@ -30,7 +31,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddTransient<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<DbSeeder>();
 
-builder.Services
+builder
+    .Services
     .AddIdentity<User, IdentityRole<int>>()
     .AddEntityFrameworkStores<DataContext>()
     .AddDefaultTokenProviders();
@@ -40,7 +42,8 @@ builder.Services
 //builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 //builder.Services.AddMemoryCache();
 //
-builder.Services
+builder
+    .Services
     .AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -60,28 +63,27 @@ builder.Services
             //ValidateAudience = true,
             //ValidateLifetime = true,
             //ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.Zero
         };
-
-        //options.Events = new JwtBearerEvents
-        //{
-        //    OnMessageReceived = context =>
-        //    {
-        //        var accessToken = context.Request.Query["access_token"];
-
-        //        var path = context.HttpContext.Request.Path;
-        //        if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/gamehub")))
-        //        {
-        //            context.Token = accessToken;
-        //        }
-        //        return Task.CompletedTask;
-        //    }
-        //};
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/gamehub")))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
 
-//builder.Services.AddSignalR();
-//builder.Services.AddSingleton<GameManager>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<GameManager>();
 
 var app = builder.Build();
 
@@ -118,6 +120,29 @@ app.UseExceptionHandler(
 );
 
 var rootGroup = app.MapGroup("/api/v1");
+
+//.AddEndpointFilter(async (context, next) =>
+//    {
+//        var result = await next(context);
+//
+//        System.Console.WriteLine(result.GetType());
+//        if (result is NotFound<string> notFoundResult)
+//        {
+//        context.HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+//            result = JsonResponseGenerator.GenerateNotFoundResponse(notFoundResult.Value);
+//        }
+//        else if (result is ForbidHttpResult)
+//        {
+//            result = JsonResponseGenerator.GenerateForbidResponse();
+//        }
+//        else if (result is UnprocessableEntity)
+//        {
+//        System.Console.WriteLine("unprocs");
+//            //result = JsonResponseGenerator.GenerateUnprocessableEntityResponse();
+//        }
+//
+//        return result;
+//    });
 rootGroup.MapAuthApi();
 rootGroup.MapUsersApi();
 rootGroup.MapTournamentsApi();
@@ -138,7 +163,7 @@ using (var scope = app.Services.CreateScope())
 app.UseAuthentication();
 app.UseAuthorization();
 
-//app.MapHub<GameHub>("/gamehub");
+app.MapHub<GameHub>("/gamehub");
 
 app.Run();
 

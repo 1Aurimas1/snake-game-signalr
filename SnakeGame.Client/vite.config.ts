@@ -22,10 +22,10 @@ export default defineConfig({
           : "ws://localhost:3000",
         ws: true,
       },
-      "/api": {
+      "/api/v1": {
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, "/api"),
+        rewrite: (path) => path.replace(/^\/api\/v1/, "/api/v1"),
         // target taken from src/setupProxy.js in ASP.NET React template
         target: process.env.ASPNETCORE_HTTPS_PORT
           ? `https://localhost:${process.env.ASPNETCORE_HTTPS_PORT}`

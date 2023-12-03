@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { GameDto, Point } from "../shared/interfaces/GameDto";
+import { Grid } from "../shared/interfaces/Grid";
 
 interface Props {
-  grid: GridDimensions;
+  grid: Grid;
   state: GameDto;
   isControllable: boolean;
-}
-
-export interface GridDimensions {
-  rows: number;
-  columns: number;
 }
 
 export const CellType = {
@@ -40,7 +36,7 @@ export const paintCell = (cell: number): string => {
 };
 
 const Game = (props: Props) => {
-  const grid: GridDimensions = props.grid;
+  const grid = props.grid;
   const isControllable = props.isControllable;
 
   const gameState: GameDto = props.state;

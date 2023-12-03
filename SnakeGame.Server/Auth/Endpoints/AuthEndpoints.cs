@@ -1,11 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using SnakeGame.Server.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using SnakeGame.Server.Filters;
-using SnakeGame.Server.Models;
 using SnakeGame.Server.Auth.Services.TokenServices;
+using SnakeGame.Server.Filters;
+using SnakeGame.Server.Helpers;
+using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 
 public static class AuthEndpoints
@@ -17,6 +17,7 @@ public static class AuthEndpoints
             .WithName(nameof(Register))
             .AddEndpointFilter<ValidationFilter<RegisterUserDto>>();
         group.MapPost("/login", Login).AddEndpointFilter<ValidationFilter<LoginUserDto>>();
+        // TODO: validation?
         group.MapPost("/logout", Logout);
         group
             .MapPost("/change-password", ChangePassword)
@@ -30,9 +31,11 @@ public static class AuthEndpoints
     {
         var user = dto.FromRegisterDto();
 
-        var isRegistrationSuccessful = await userService.Register(user, dto.Password);
-        if (!isRegistrationSuccessful)
-            return Results.UnprocessableEntity("Registration failed");
+        var identityErrors = await userService.Register(user, dto.Password);
+        if (identityErrors != null)
+            return Results.UnprocessableEntity(
+                JsonResponseGenerator.GenerateIdentityErrorResponse(identityErrors)
+            );
 
         return Results.CreatedAtRoute(nameof(Register), user.ToDto());
     }
@@ -125,7 +128,11 @@ public static class AuthEndpoints
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var changePasswordResult = await userService.ChangePassword(user, dto.OldPassword, dto.NewPassword);
+        var changePasswordResult = await userService.ChangePassword(
+            user,
+            dto.OldPassword,
+            dto.NewPassword
+        );
         if (!changePasswordResult.Succeeded)
             return TypedResults.UnprocessableEntity("Password change failed");
 
@@ -133,9 +140,9 @@ public static class AuthEndpoints
     }
 
     public static async Task<IResult> RefreshAccessToken(
+        RefreshAccessTokenDto dto,
         UserManager<User> userManager,
-        IJwtTokenService jwtTokenService,
-        RefreshAccessTokenDto dto
+        IJwtTokenService jwtTokenService
     )
     {
         if (!jwtTokenService.TryParseRefreshToken(dto.RefreshToken, out var claims))

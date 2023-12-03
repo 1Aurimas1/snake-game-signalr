@@ -11,7 +11,7 @@ interface ProfileDto {
 }
 
 export const Profile = () => {
-  const { userToken } = useAuth();
+  const { accessToken: userToken } = useAuth();
   const [profile, setProfile] = useState<ProfileDto>();
 
   async function getProfileInfo() {

@@ -1,28 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import {
-  HubConnection,
-  HubConnectionBuilder,
-  LogLevel,
-} from "@microsoft/signalr";
 import { GameMode } from "../shared/constants/GameMode";
 import { GameDto } from "../shared/interfaces/GameDto";
 import Game from "../components/Game";
 import Spinner from "../components/Spinner";
 import ErrorComponent from "../components/ErrorComponent";
-
-export interface Grid {
-  rows: number;
-  columns: number;
-}
-
-const Direction = {
-  UP: 0,
-  DOWN: 1,
-  LEFT: 2,
-  RIGHT: 3,
-} as const;
-type Direction = (typeof Direction)[keyof typeof Direction];
+import { useAuth } from "../hooks/useAuth";
+import GameHubConnector from "../utils/GameHubConnector";
+import { Grid } from "../shared/interfaces/Grid";
+import { Direction } from "../shared/constants/Directions";
 
 const Controls = {
   UP: ["ArrowUp", "w"],
@@ -32,13 +18,12 @@ const Controls = {
 };
 
 const GameRoom = () => {
-  // IDEA: if null ask user to relog?
-  let playerName: string | null = sessionStorage.getItem("username");
+  const { accessToken, refreshAccessToken } = useAuth();
+  let playerName: string = "test";
   let roomId: string;
 
   const location = useLocation();
   const selectedMode: GameMode = location.state?.selectedMode;
-  const userToken: string = location.state?.userToken;
 
   if (selectedMode == null) {
     return (
@@ -50,7 +35,7 @@ const GameRoom = () => {
     );
   }
 
-  const hub = useRef<HubConnection | null>(null);
+  const gameHub = useRef<GameHubConnector | null>(null);
 
   const [grid, setGrid] = useState<Grid>({ rows: 12, columns: 12 });
   const [isStarting, setIsStarting] = useState(true);
@@ -60,80 +45,66 @@ const GameRoom = () => {
   const direction = useRef<Direction>();
   const wasInputProcessed = useRef(true);
 
-  useEffect(() => {
-    const connection = new HubConnectionBuilder()
-      .withUrl("/gamehub", { accessTokenFactory: () => userToken })
-      .configureLogging(LogLevel.Information)
-      .build();
-
-    connection.onclose((error) => {
-      if (error) {
-        console.error("SignalR connection closed with an error:", error);
-      } else {
-        console.log(
-          "SignalR connection closed by the server or due to other reasons.",
-        );
-      }
-    });
-
-    const startConnection = async () => {
-      try {
-        await connection.start();
-        roomId = await connection.invoke("JoinGame", playerName, selectedMode);
-
-        const data = await connection.invoke("InitGrid");
-        const gridDims: Grid = {
-          rows: data.item1,
-          columns: data.item2,
+  const { fetch: originalFetch } = window;
+  window.fetch = async (...args) => {
+    let [resource, config] = args;
+    let response = await originalFetch(resource as RequestInfo, config);
+    // response interceptor
+    if (response.status === 401) {
+      const newAccessToken = await refreshAccessToken();
+      if (newAccessToken && config) {
+        config.headers = {
+          ...config?.headers,
+          Authorization: `Bearer ${newAccessToken}`,
         };
-        setGrid(gridDims);
-      } catch (error) {
-        console.error("Error starting SignalR connection: ", error);
+        response = await fetch(resource as RequestInfo, config);
       }
+    }
+    return response;
+  };
+
+  const receiveGameStates = (newGameStates: GameDto[], initial: boolean) => {
+    if (wasInputProcessed.current === false) {
+      wasInputProcessed.current = true;
+    }
+    setIsStarting(initial);
+    setGameStates(newGameStates);
+  };
+
+  const receiveCountdown = (i: number) => {
+    setCountdown(i);
+  };
+
+  useEffect(() => {
+    const gameHubConnector = new GameHubConnector(accessToken);
+
+    const initConnection = async () => {
+      gameHubConnector.on("receiveCountdown", receiveCountdown);
+      gameHubConnector.on("receiveGameStates", receiveGameStates);
+
+      await gameHubConnector.startConnection();
+
+      roomId = await gameHubConnector.joinGame(playerName, selectedMode);
+      setGrid(await gameHubConnector.initGrid());
+
+      gameHub.current = gameHubConnector;
     };
 
-    startConnection();
-    hub.current = connection;
+    initConnection();
+
+    window.addEventListener("keyup", handleKeyDown);
 
     return () => {
-      connection.stop();
+      gameHubConnector.off("receiveCountdown");
+      gameHubConnector.off("receiveGameStates");
+      gameHubConnector.stopConnection();
+
+      window.removeEventListener("keyup", handleKeyDown);
     };
   }, []);
 
-  useEffect(() => {
-    if (!hub.current) return;
-
-    hub.current.on(
-      "ReceiveStateObjects",
-      (gameStates: GameDto[], initial: boolean) => {
-        if (wasInputProcessed.current === false) {
-          wasInputProcessed.current = true;
-        }
-
-        setIsStarting(initial);
-        setGameStates(gameStates);
-      },
-    );
-
-    return () => {
-      hub.current?.off("ReceiveStateObjects");
-    };
-  }, [gameStates]);
-
-  useEffect(() => {
-    if (!hub.current) return;
-
-    hub.current.on("ReceiveCountdown", (i: number) => {
-      setCountdown(i);
-    });
-
-    return () => {
-      hub.current?.off("ReceiveCountdown");
-    };
-  }, [countdown]);
-
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (!wasInputProcessed.current || !hub.current) return;
+    if (!wasInputProcessed.current || !gameHub.current) return;
 
     let newDirection: Direction;
     if (
@@ -164,21 +135,11 @@ const GameRoom = () => {
       return;
     }
 
-    hub.current
-      .invoke("SendInput", roomId, playerName, newDirection)
-      .catch((e) => console.error("[SendInput] error: ", e));
+    gameHub.current.sendUserInput(roomId, playerName, newDirection);
 
     direction.current = newDirection;
     wasInputProcessed.current = false;
   };
-
-  useEffect(() => {
-    window.addEventListener("keyup", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keyup", handleKeyDown);
-    };
-  }, []);
 
   return (
     <div className="relative">
@@ -197,18 +158,14 @@ const GameRoom = () => {
           isStarting && "blur-[2px]"
         }`}
       >
-        {gameStates.map((state, i) => {
-          let isControllable = false;
-          if (playerName === state.playerName) isControllable = true;
-          return (
-            <Game
-              key={i}
-              grid={grid}
-              isControllable={isControllable}
-              state={state}
-            />
-          );
-        })}
+        {gameStates.map((state, i) => (
+          <Game
+            key={i}
+            grid={grid}
+            isControllable={state.playerName === playerName ? true : false}
+            state={state}
+          />
+        ))}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import RequireAuth from "../src/components/RequireAuth";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Logout from "./pages/Logout";
-import GameMap from "./pages/GameMap";
+import GameMapCreation from "./pages/GameMapCreation";
 import GameModeSelection from "./pages/GameModeSelection";
 import GameRoom from "./pages/GameRoom";
 import Profile from "./pages/Profile";
@@ -26,7 +26,7 @@ function App() {
             <Route element={<RequireAuth />}>
                 <Route path="/" element={<GameModeSelection />} />
                 <Route path="/play" element={<GameRoom />} />
-                <Route path="/gamemap" element={<GameMap />} />
+                <Route path="/maps/new" element={<GameMapCreation />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="*" element={<NotFound />} />

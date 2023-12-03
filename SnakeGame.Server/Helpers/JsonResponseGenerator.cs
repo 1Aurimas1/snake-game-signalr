@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 public static class JsonResponseGenerator
@@ -13,11 +14,22 @@ public static class JsonResponseGenerator
         return errors;
     }
 
-    public static IEnumerable<IEnumerable<CustomError>> GenerateModelErrorResponse(ModelStateDictionary modelDictionary)
+    public static IEnumerable<IEnumerable<CustomError>> GenerateModelErrorResponse(
+        ModelStateDictionary modelDictionary
+    )
     {
-        var errors = modelDictionary.Values.Select(
-            v => v.Errors.Select(e => new CustomError("", "", e.ErrorMessage))
-        );
+        var errors = modelDictionary
+            .Values
+            .Select(v => v.Errors.Select(e => new CustomError("", "", e.ErrorMessage)));
+
+        return errors;
+    }
+
+    public static IEnumerable<CustomError> GenerateIdentityErrorResponse(
+        IEnumerable<IdentityError> identityErrors
+    )
+    {
+        var errors = identityErrors.Select(e => new CustomError("", e.Code, e.Description));
 
         return errors;
     }

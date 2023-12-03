@@ -25,13 +25,13 @@ public class GameManager
 
             if (room.Status == GameRoomStatus.ReadyToStart)
             {
-                _hubContext.Clients.Group(room.Id).ReceiveStateObjects(room.GetGameStates(), true);
+                _hubContext.Clients.Group(room.Id).ReceiveGameStates(room.GetGameStates(), true);
                 BeginRoomInitialCountdown(room);
             }
             else if (room.Status == GameRoomStatus.Running)
             {
                 room.UpdateGameStates();
-                _hubContext.Clients.Group(room.Id).ReceiveStateObjects(room.GetGameStates(), false);
+                _hubContext.Clients.Group(room.Id).ReceiveGameStates(room.GetGameStates(), false);
             }
             else if (room.Status == GameRoomStatus.Finished)
             {
@@ -55,7 +55,11 @@ public class GameManager
         room.Start();
     }
 
-    public async Task<string> JoinGameRoom(string connectionId, string playerName, GameMode gameMode)
+    public async Task<string> JoinGameRoom(
+        string connectionId,
+        string playerName,
+        GameMode gameMode
+    )
     {
         var room = FindOrCreateGameRoom(playerName, gameMode);
         room.Join(playerName);
@@ -96,5 +100,3 @@ public class GameManager
         _rooms.Find(r => r.Id == gameRoomId)?.UpdatePlayerMovePosition(playerName, direction);
     }
 }
-
-

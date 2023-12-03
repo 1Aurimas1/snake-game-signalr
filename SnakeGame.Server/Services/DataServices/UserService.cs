@@ -10,7 +10,7 @@ public interface IUserService
     Task<List<User>> GetAll();
     Task<User?> GetByName(string userName);
     Task<(User user, IList<string> roles)?> Login(string userName, string password);
-    Task<bool> Register(User user, string password);
+    Task<IEnumerable<IdentityError>?> Register(User user, string password);
     Task<IdentityResult> Remove(User user);
     Task<IdentityResult> Update(User user, UpdateUserDto dto);
     Task UpdateForceRelogin(User user, bool toRelog);
@@ -64,18 +64,17 @@ public class UserService : IUserService
         return await _userManager.DeleteAsync(user);
     }
 
-    public async Task<bool> Register(User user, string password)
+    public async Task<IEnumerable<IdentityError>?> Register(User user, string password)
     {
         var userResult = await _userManager.CreateAsync(user, password);
-        // TODO: userResult.errors
         if (!userResult.Succeeded)
-            return false;
+            return userResult.Errors;
 
         var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Basic);
         if (!roleResult.Succeeded)
-            return false;
+            return roleResult.Errors;
 
-        return true;
+        return null;
     }
 
     public async Task UpdateForceRelogin(User user, bool toRelog)

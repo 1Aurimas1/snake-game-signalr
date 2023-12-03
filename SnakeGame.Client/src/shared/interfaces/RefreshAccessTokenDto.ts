@@ -1,0 +1,4 @@
+interface RefreshAccessTokenDto {
+  refreshToken: string;
+}
+
