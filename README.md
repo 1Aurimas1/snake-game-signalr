@@ -67,3 +67,8 @@ In-game screen
 <p align=center>
   <img src="./screenshots/ingame.png">
 </p>
+
+Map creation page
+<p align=center>
+  <img src="./screenshots/map_creator.png">
+</p>
