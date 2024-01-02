@@ -8,6 +8,6 @@ export type ApiErrorResponse = ApiError | ApiError[];
 
 export interface ApiResponse {
     apiData: any;
-    apiError: ApiErrorResponse;
+    apiError: ApiErrorResponse | null;
     httpStatusCode: number;
 }

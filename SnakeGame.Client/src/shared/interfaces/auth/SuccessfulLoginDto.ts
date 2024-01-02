@@ -1,4 +1,4 @@
-export default interface SuccessfulLoginDto {
+export interface SuccessfulLoginDto {
     accessToken: string; 
     refreshToken: string;
 }
