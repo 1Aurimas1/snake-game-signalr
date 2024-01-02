@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { GameMode } from "../shared/constants/GameMode";
-import Button from "../components/Button";
-import ContentWrapper from "../components/ContentWrapper";
+import { GameMode } from "../../shared/constants/GameMode";
+import { PLAY } from "../../shared/constants/Routes";
+import { Button, ContentWrapper } from "../../components";
 
 interface ModeSelection {
   title: string;
@@ -21,7 +21,7 @@ const GameModeSelection = () => {
     selectedMode: GameMode,
   ) => {
     e.preventDefault();
-    navigate("/play", { state: { selectedMode } });
+    navigate(PLAY, { state: { selectedMode } });
   };
 
   return (

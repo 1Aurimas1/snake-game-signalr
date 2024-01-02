@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { GameMode } from "../shared/constants/GameMode";
-import { GameDto } from "../shared/interfaces/GameDto";
-import Game from "../components/Game";
-import Spinner from "../components/Spinner";
-import ErrorComponent from "../components/ErrorComponent";
-import { useAuth } from "../hooks/useAuth";
-import GameHubConnector from "../utils/GameHubConnector";
-import { Grid } from "../shared/interfaces/Grid";
-import { Direction } from "../shared/constants/Directions";
+import { GameMode } from "../../shared/constants/GameMode";
+import { useAuth } from "../../hooks/useAuth";
+import { Direction } from "../../shared/constants/Directions";
+import { LOGIN } from "../../shared/constants/Routes";
+import { ErrorComponent, Game, Spinner } from "../../components";
+import { GameStateDto, GridSize } from "../../shared/interfaces";
+import GameHubConnector from "../../shared/classes/GameHubConnector";
 
 const Controls = {
   UP: ["ArrowUp", "w"],
@@ -18,8 +16,7 @@ const Controls = {
 };
 
 const GameRoom = () => {
-  const { accessToken, refreshAccessToken } = useAuth();
-  let playerName: string = "test";
+  const { accessToken, refreshAccessToken, userAuthData } = useAuth();
   let roomId: string;
 
   const location = useLocation();
@@ -33,14 +30,23 @@ const GameRoom = () => {
         redirectMessage="Go to game mode selection?"
       />
     );
+  } else if (!userAuthData) {
+    return (
+      <ErrorComponent
+        title="auth error"
+        helperMessage="Failed to authorize account. Please relogin..."
+        redirectPath={LOGIN}
+        redirectMessage="Go to login page?"
+      />
+    );
   }
 
   const gameHub = useRef<GameHubConnector | null>(null);
 
-  const [grid, setGrid] = useState<Grid>({ rows: 12, columns: 12 });
+  const [gridSize, setGridSize] = useState<GridSize>({ rows: 12, cols: 12 });
   const [isStarting, setIsStarting] = useState(true);
   const [countdown, setCountdown] = useState(0);
-  const [gameStates, setGameStates] = useState<GameDto[]>([]);
+  const [gameStates, setGameStates] = useState<GameStateDto[]>([]);
 
   const direction = useRef<Direction>();
   const wasInputProcessed = useRef(true);
@@ -63,7 +69,10 @@ const GameRoom = () => {
     return response;
   };
 
-  const receiveGameStates = (newGameStates: GameDto[], initial: boolean) => {
+  const receiveGameStates = (
+    newGameStates: GameStateDto[],
+    initial: boolean,
+  ) => {
     if (wasInputProcessed.current === false) {
       wasInputProcessed.current = true;
     }
@@ -84,8 +93,8 @@ const GameRoom = () => {
 
       await gameHubConnector.startConnection();
 
-      roomId = await gameHubConnector.joinGame(playerName, selectedMode);
-      setGrid(await gameHubConnector.initGrid());
+      roomId = await gameHubConnector.joinGame(userAuthData.name, selectedMode);
+      setGridSize(await gameHubConnector.initGrid());
 
       gameHub.current = gameHubConnector;
     };
@@ -135,7 +144,7 @@ const GameRoom = () => {
       return;
     }
 
-    gameHub.current.sendUserInput(roomId, playerName, newDirection);
+    gameHub.current.sendUserInput(roomId, userAuthData.name, newDirection);
 
     direction.current = newDirection;
     wasInputProcessed.current = false;
@@ -161,8 +170,8 @@ const GameRoom = () => {
         {gameStates.map((state, i) => (
           <Game
             key={i}
-            grid={grid}
-            isControllable={state.playerName === playerName ? true : false}
+            gridSize={gridSize}
+            isControllable={state.playerName === userAuthData.name}
             state={state}
           />
         ))}
