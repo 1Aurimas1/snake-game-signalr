@@ -4,9 +4,9 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { GameMode } from "../shared/constants/GameMode";
-import { Grid } from "../shared/interfaces/Grid";
-import { Direction } from "../shared/constants/Directions";
+import { GridSize } from "../interfaces";
+import { GameMode } from "../constants/GameMode";
+import { Direction } from "../constants/Directions";
 
 class GameHubConnector {
   private connection: HubConnection;
@@ -50,7 +50,7 @@ class GameHubConnector {
     await this.waitForCondition((s) => this.connection.state === s, state);
   }
 
-  public async initGrid(): Promise<Grid> {
+  public async initGrid(): Promise<GridSize> {
     await this.waitForState(HubConnectionState.Connected);
     const tuple = await this.connection.invoke("InitGrid");
     return {

@@ -1,3 +1,5 @@
+import { GameMode } from "../shared/constants/GameMode";
+
 const isValidEmail = (email: string): boolean => {
   if (email.includes(" ")) return false;
 
@@ -80,9 +82,9 @@ export const passwordConfirmationValidation = {
 };
 
 export const mapNameValidation = {
-  label: "map name",
-  id: "mapName",
-  name: "mapName",
+  label: "name",
+  id: "name",
+  name: "name",
   type: "text",
   placeholder: "map name...",
   validation: {
@@ -91,4 +93,168 @@ export const mapNameValidation = {
       message: "This field can't be empty",
     },
   },
+};
+
+export const mapRatingValidation = {
+  label: "rating",
+  id: "mapRating",
+  name: "mapRating",
+  type: "number",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+    min: {
+      value: 1,
+      message: "Minimum rating value should be at least 1",
+    },
+    max: {
+      value: 5,
+      message: "Maximum rating value should be below 6",
+    },
+    valueAsNumber: true,
+  },
+};
+
+export const tournamentNameValidation = {
+  label: "name",
+  id: "name",
+  name: "name",
+  type: "text",
+  placeholder: "tournament name...",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+  },
+};
+
+export const tournamentMaxParticipantsValidation = {
+  label: "max participants",
+  id: "maxparticipants",
+  name: "maxparticipants",
+  type: "number",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+    min: {
+      value: 2,
+      message: "Maximum participants should be at least 2",
+    },
+    valueAsNumber: true,
+  },
+};
+
+export const startDateTimeValidation = {
+  label: "start time",
+  id: "startTime",
+  name: "startTime",
+  type: "date",
+  placeholder: "start time...",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+  },
+};
+
+export const endDateTimeValidation = {
+  label: "end time",
+  id: "endTime",
+  name: "endTime",
+  type: "date",
+  placeholder: "end time...",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+  },
+};
+
+export const tournamentRoundsValidation = {
+  label: "rounds",
+  id: "rounds",
+  name: "rounds",
+  type: "array",
+};
+
+export const tournamentRoundMapIdValidation = {
+  label: "roundMapId",
+  id: "roundMapId",
+  name: "roundMapId",
+  type: "number",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+    valueAsNumber: true,
+  },
+};
+
+export const gameNameValidation = {
+  label: "name",
+  id: "name",
+  name: "name",
+  type: "text",
+  placeholder: "game name...",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+  },
+};
+
+export const gameModeValidation = {
+  label: "game mode",
+  id: "gameMode",
+  name: "mode",
+  type: "text",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+    validate: (value) =>
+      Object.values(GameMode).includes(parseInt(value) as GameMode) ||
+      "Invalid game mode option",
+    valueAsNumber: true,
+  },
+};
+
+export const gameMapIdValidation = {
+  label: "game map id",
+  id: "gameMapId",
+  name: "mapId",
+  type: "number",
+  validation: {
+    required: {
+      value: true,
+      message: "This field can't be empty",
+    },
+    valueAsNumber: true,
+  },
+};
+
+export const editUserNameValidation = {
+  label: "username",
+  id: "username",
+  name: "username",
+  type: "text",
+  placeholder: "username...",
+};
+
+export const editEmailValidation = {
+  label: "email address",
+  id: "email",
+  name: "email",
+  type: "email",
+  placeholder: "email...",
 };
