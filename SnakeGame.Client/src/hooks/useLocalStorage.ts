@@ -1,16 +1,19 @@
 import { useState } from "react";
+import getStorage from "../utils/getStorage";
 
 export function useLocalStorage(
   keyName: string,
   defaultValue: string | null,
 ): [string, (newValue: string) => void] {
+  const storage = getStorage();
+
   const [storedValue, setStoredValue] = useState(() => {
     try {
-      const item = window.sessionStorage.getItem(keyName);
+      const item = storage.getItem(keyName);
       if (item) {
         return JSON.parse(item);
       } else {
-        window.sessionStorage.setItem(keyName, JSON.stringify(defaultValue));
+        storage.setItem(keyName, JSON.stringify(defaultValue));
         return defaultValue;
       }
     } catch (err) {
@@ -21,9 +24,9 @@ export function useLocalStorage(
   function setValue(newValue: string) {
     try {
       setStoredValue(newValue);
-      window.sessionStorage.setItem(keyName, JSON.stringify(newValue));
+      storage.setItem(keyName, JSON.stringify(newValue));
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   }
 

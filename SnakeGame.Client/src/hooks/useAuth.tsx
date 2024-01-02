@@ -9,13 +9,15 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useLocalStorage } from "./useLocalStorage";
-import SuccessfulLoginDto from "../shared/interfaces/SuccessfulLoginDto";
 import { useFetch } from "./useFetch";
-import { ApiResponse } from "../shared/interfaces/ApiResponse";
+import { jwtDecode } from "jwt-decode";
+import { HOME, LOGIN, LOGOUT } from "../shared/constants/Routes";
+import { ApiResponse, SuccessfulLoginDto } from "../shared/interfaces";
 
 interface AuthContextType {
   accessToken: string;
   refreshToken: string;
+  userAuthData: UserAuthData | null;
   authFetch: (
     endpoint: string,
     options: RequestInit,
@@ -26,13 +28,45 @@ interface AuthContextType {
   logout: () => void;
 }
 
+export enum UserRole {
+  Admin = "Admin",
+  Basic = "Basic",
+  Guest = "Guest",
+}
+
+interface UserAuthData {
+  id: string;
+  name: string;
+  roles: string[];
+}
+
+function tryGetUserAuthDataFromToken(
+  accessToken: string | null,
+): UserAuthData | null {
+  if (!accessToken) {
+    return null;
+  }
+  const decodedToken = jwtDecode(accessToken);
+  const id = decodedToken.sub;
+  const roles =
+    decodedToken[
+      "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" as keyof typeof decodedToken
+    ];
+  const name =
+    decodedToken[
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name" as keyof typeof decodedToken
+    ];
+
+  return { id, roles, name } as UserAuthData;
+}
+
 function getRedirectPath(fromPath: string) {
   switch (fromPath) {
-    case "/login":
-    case "/logout":
+    case LOGIN:
+    case LOGOUT:
     case "":
     case null:
-      return "/";
+      return HOME;
     default:
       return fromPath;
   }
@@ -48,6 +82,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [refreshToken, setRefreshToken] = useLocalStorage("refreshToken", null);
   const [previousJwt, setPreviousJwt] = useState({ accessToken, refreshToken });
   const isJwtUpdated = useRef(false);
+
+  const userAuthData = tryGetUserAuthDataFromToken(accessToken);
 
   useEffect(() => {
     if (accessToken !== previousJwt.accessToken) {
@@ -112,6 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Token refresh error. Logging out...");
         logout();
       } else {
+        console.log("Updating tokens...");
         const tokens = { ...apiData } as SuccessfulLoginDto;
         setAccessToken(tokens.accessToken);
         setRefreshToken(tokens.refreshToken);
@@ -131,13 +168,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   function logout() {
     sessionStorage.clear();
     localStorage.clear();
-    navigate("/login", { replace: true });
+    setAccessToken("");
+    setRefreshToken("");
+    navigate(LOGIN, { replace: true });
   }
 
   const value = useMemo(
     () => ({
       accessToken,
       refreshToken,
+      userAuthData,
       authFetch,
       refreshAccessToken,
       login,

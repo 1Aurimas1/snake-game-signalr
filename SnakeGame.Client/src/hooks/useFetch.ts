@@ -1,13 +1,13 @@
-import { API_PREFIX } from "../shared/constants/constants";
-import { ApiResponse } from "../shared/interfaces/ApiResponse";
+import { API_PREFIX } from "../shared/constants/Constants";
+import { ApiErrorResponse, ApiResponse } from "../shared/interfaces";
 
 export async function useFetch(
   endpoint: string,
   options: RequestInit,
   body?: any,
 ): Promise<ApiResponse> {
-  let apiData: any;
-  let apiError: any;
+  let apiData: any = null;
+  let apiError: ApiErrorResponse | null = null;
   let httpStatusCode: number = 0;
 
   await fetch(`${API_PREFIX}${endpoint}`, {
