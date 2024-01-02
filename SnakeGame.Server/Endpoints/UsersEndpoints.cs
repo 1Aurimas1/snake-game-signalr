@@ -20,32 +20,41 @@ public static class UsersEndpoints
     }
 
     [Authorize(Roles = UserRoles.Admin)]
-    public static async Task<Ok<List<UserDto>>> GetAllUsers(IUserService userService)
+    public static async Task<Ok<List<PrivateUserDto>>> GetAllUsers(IUserService userService)
     {
         var users = await userService.GetAll();
 
-        return TypedResults.Ok(users.Select(x => x.ToDto()).ToList());
-    }
-
-    [Authorize(Roles = UserRoles.Admin)]
-    public static async Task<Results<Ok<UserDto>, NotFound<CustomError>>> GetUser(
-        int id,
-        IUserService userService
-    )
-    {
-        var user = await userService.Get(id);
-        if (user == null)
-            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
-
-        return TypedResults.Ok(user.ToDto());
+        return TypedResults.Ok(users.Select(x => x.ToPrivateDto()).ToList());
     }
 
     [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
-        Results<Ok<UserDto>, UnprocessableEntity<CustomError>, NotFound<CustomError>>
-    > UpdateUser(HttpContext httpContext, UpdateUserDto dto, IUserService userService)
+        Results<Ok<PrivateUserDto>, ForbidHttpResult, NotFound<CustomError>>
+    > GetUser(int id, HttpContext httpContext, IUserService userService)
     {
-        if (!httpContext.TryGetJwtUserId(out int id))
+        if (!httpContext.CanUserAccessEndpoint(id))
+        {
+            return TypedResults.Forbid();
+        }
+
+        var user = await userService.Get(id);
+        if (user == null)
+            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+
+        return TypedResults.Ok(user.ToPrivateDto());
+    }
+
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<
+        Results<
+            Ok<PrivateUserDto>,
+            UnprocessableEntity<CustomError>,
+            ForbidHttpResult,
+            NotFound<CustomError>
+        >
+    > UpdateUser(int id, HttpContext httpContext, UpdateUserDto dto, IUserService userService)
+    {
+        if (!httpContext.TryGetJwtUserId(out int jwtId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "UserId",
@@ -53,7 +62,12 @@ public static class UsersEndpoints
                 )
             );
 
-        var user = await userService.Get(id);
+        if (!httpContext.CanUserAccessEndpoint(id))
+        {
+            return TypedResults.Forbid();
+        }
+
+        var user = await userService.Get(jwtId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
@@ -63,7 +77,7 @@ public static class UsersEndpoints
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse("", "Update error")
             );
 
-        return TypedResults.Ok(user.ToDto());
+        return TypedResults.Ok(user.ToPrivateDto());
     }
 
     [Authorize(Roles = UserRoles.Admin)]

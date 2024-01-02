@@ -11,46 +11,23 @@ public static class GamesEndpoints
     public static RouteGroupBuilder MapGamesApi(this RouteGroupBuilder group)
     {
         group.MapGet("/games", GetAllGames);
-        group.MapGet("/games/open", GetAllOpenGames);
-        group.MapGet("/users/{userId}/games", GetAllUserGames);
         group.MapGet("/users/{userId}/games/{id}", GetUserGame).WithName(nameof(GetUserGame));
         group
             .MapPost("/games", CreateUserGame)
             .AddEndpointFilter<ValidationFilter<CreateGameDto>>();
         group.MapPatch("/users/{userId}/games/{id}", UpdateUserGame);
-        group.MapDelete("/games/{id}", RemoveUserGame);
+        group.MapDelete("/users/{userId}/games/{id}", RemoveUserGame);
+
+        group.MapGet("/games/open", GetAllOpenGames);
+        group.MapGet("/users/{userId}/games", GetAllUserGames);
 
         return group;
     }
 
-    [Authorize(Roles = UserRoles.Basic)]
+    [AllowAnonymous]
     public static async Task<Ok<List<GameDto>>> GetAllGames(IGameService gameService)
     {
         var games = await gameService.GetAll();
-
-        return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
-    }
-
-    [Authorize(Roles = UserRoles.Basic)]
-    public static async Task<Ok<List<GameDto>>> GetAllOpenGames(IGameService gameService)
-    {
-        var games = await gameService.GetAllFiltered(g => g.IsOpen);
-
-        return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
-    }
-
-    [Authorize(Roles = UserRoles.Basic)]
-    public static async Task<Results<Ok<List<GameDto>>, NotFound<CustomError>>> GetAllUserGames(
-        int userId,
-        IUserService userService,
-        IGameService gameService
-    )
-    {
-        var user = await userService.Get(userId);
-        if (user == null)
-            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
-
-        var games = await gameService.GetAllFiltered(g => g.Creator.Id == userId);
 
         return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
@@ -99,7 +76,9 @@ public static class GamesEndpoints
 
         var map = await mapService.Get(dto.MapId);
         if (map == null)
-            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("map"));
+            return TypedResults.NotFound(
+                JsonResponseGenerator.GenerateNotFoundResponse(nameof(dto.MapId))
+            );
 
         var game = dto.FromCreateDto(map, user);
         await gameService.Add(game);
@@ -152,7 +131,7 @@ public static class GamesEndpoints
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "player",
-                    "Cannot join same game more than once"
+                    "You cannot join the same game more than once."
                 )
             );
 
@@ -163,15 +142,21 @@ public static class GamesEndpoints
 
     [Authorize(Roles = UserRoles.Basic)]
     public static async Task<
-        Results<NoContent, UnprocessableEntity<CustomError>, NotFound<CustomError>>
+        Results<
+            NoContent,
+            UnprocessableEntity<CustomError>,
+            ForbidHttpResult,
+            NotFound<CustomError>
+        >
     > RemoveUserGame(
+        int userId,
         int id,
         HttpContext httpContext,
         IUserService userService,
         IGameService gameService
     )
     {
-        if (!httpContext.TryGetJwtUserId(out int userId))
+        if (!httpContext.TryGetJwtUserId(out int tokenUserId))
             return TypedResults.UnprocessableEntity(
                 JsonResponseGenerator.GenerateUnprocessableEntityResponse(
                     "UserId",
@@ -179,16 +164,43 @@ public static class GamesEndpoints
                 )
             );
 
-        var user = await userService.Get(userId);
+        if (userId != tokenUserId)
+            return TypedResults.Forbid();
+
+        var user = await userService.Get(tokenUserId);
         if (user == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
 
-        var game = await gameService.GetUserGame(userId, id);
+        var game = await gameService.GetUserGame(tokenUserId, id);
         if (game == null)
             return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("game"));
 
         await gameService.Remove(game);
 
         return TypedResults.NoContent();
+    }
+
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<Ok<List<GameDto>>> GetAllOpenGames(IGameService gameService)
+    {
+        var games = await gameService.GetAllFiltered(g => g.IsOpen);
+
+        return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
+    }
+
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<Results<Ok<List<GameDto>>, NotFound<CustomError>>> GetAllUserGames(
+        int userId,
+        IUserService userService,
+        IGameService gameService
+    )
+    {
+        var user = await userService.Get(userId);
+        if (user == null)
+            return TypedResults.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+
+        var games = await gameService.GetAllFiltered(g => g.Creator.Id == userId);
+
+        return TypedResults.Ok(games.Select(x => x.ToDto()).ToList());
     }
 }

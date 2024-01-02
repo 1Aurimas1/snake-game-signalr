@@ -11,17 +11,16 @@ public static class TournamentsEndpoints
     {
         // Tournaments
         group.MapGet("/tournaments", GetAllTournaments);
-        group.MapGet("/users/{userId}/tournaments", GetAllUserTournaments);
         group
             .MapGet("/users/{userId}/tournaments/{id}", GetUserTournament)
             .WithName(nameof(GetUserTournament));
         group
             .MapPost("/tournaments", CreateUserTournament)
             .AddEndpointFilter<ValidationFilter<CreateTournamentDto>>();
-        group
-            .MapPatch("/users/{userId}/tournaments/{id}", UpdateUserTournament)
-            .AddEndpointFilter<ValidationFilter<UpdateTournamentDto>>();
+        group.MapPatch("/users/{userId}/tournaments/{id}", UpdateUserTournament);
         group.MapDelete("/users/{userId}/tournaments/{id}", RemoveUserTournament);
+
+        group.MapGet("/users/{userId}/tournaments", GetAllUserTournaments);
         // Rounds
         group.MapGet(
             "/users/{userId}/tournaments/{tournamentId}/rounds",
@@ -35,22 +34,6 @@ public static class TournamentsEndpoints
     public static async Task<IResult> GetAllTournaments(ITournamentService tournamentService)
     {
         var tournaments = await tournamentService.GetAll();
-
-        return Results.Ok(tournaments.Select(x => x.ToDto()));
-    }
-
-    [Authorize(Roles = UserRoles.Basic)]
-    public static async Task<IResult> GetAllUserTournaments(
-        int userId,
-        IUserService userService,
-        ITournamentService tournamentService
-    )
-    {
-        var user = await userService.Get(userId);
-        if (user == null)
-            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
-
-        var tournaments = await tournamentService.GetAllFiltered(x => x.Organizer.Id == userId);
 
         return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
@@ -174,6 +157,22 @@ public static class TournamentsEndpoints
         await tournamentService.Remove(tournament);
 
         return Results.NoContent();
+    }
+
+    [Authorize(Roles = UserRoles.Basic)]
+    public static async Task<IResult> GetAllUserTournaments(
+        int userId,
+        IUserService userService,
+        ITournamentService tournamentService
+    )
+    {
+        var user = await userService.Get(userId);
+        if (user == null)
+            return Results.NotFound(JsonResponseGenerator.GenerateNotFoundResponse("user"));
+
+        var tournaments = await tournamentService.GetAllFiltered(x => x.Organizer.Id == userId);
+
+        return Results.Ok(tournaments.Select(x => x.ToDto()));
     }
 
     [Authorize(Roles = UserRoles.Admin)]
