@@ -37,11 +37,6 @@ builder
     .AddEntityFrameworkStores<DataContext>()
     .AddDefaultTokenProviders();
 
-//builder.Services.AddTransient<TokenManagerMiddleware>();
-//builder.Services.AddTransient<ITokenManager, TokenManager>();
-//builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-//builder.Services.AddMemoryCache();
-//
 builder
     .Services
     .AddAuthentication(options =>
@@ -59,10 +54,6 @@ builder
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
             ),
-            //ValidateIssuer = true,
-            //ValidateAudience = true,
-            //ValidateLifetime = true,
-            //ValidateIssuerSigningKey = true,
             ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
@@ -153,9 +144,6 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
 
-    //var context = services.GetRequiredService<DataContext>();
-    //context.Database.EnsureCreated();
-    //new DbSeeder(context);
     var dbSeeder = services.GetRequiredService<DbSeeder>();
     await dbSeeder.SeedAsync();
 }

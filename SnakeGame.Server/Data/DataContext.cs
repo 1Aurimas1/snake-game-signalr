@@ -19,12 +19,9 @@ public class DataContext : IdentityDbContext<User, IdentityRole<int>, int>
     public DbSet<RevokedJwtToken> RevokedJwtTokens { get; set; }
 
     public DataContext(DbContextOptions<DataContext> options) : base(options) { }
-    //public DataContext(DbContextOptions<DataContext> options) {}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        //modelBuilder.Entity<User>().HasIndex(u => u.UserName).IsUnique();
-        //modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<IdentityUser<int>>().HasIndex(u => u.UserName).IsUnique();
         modelBuilder.Entity<IdentityUser<int>>().HasIndex(u => u.Email).IsUnique();

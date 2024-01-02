@@ -19,7 +19,7 @@ public static class HttpContextExtensions
         return true;
     }
 
-    public static bool CanUserModifyResource(this HttpContext httpContext, int resourceOwnerId)
+    public static bool CanUserAccessEndpoint(this HttpContext httpContext, int resourceOwnerId)
     {
         if (
             httpContext.User.IsInRole(UserRoles.Admin)

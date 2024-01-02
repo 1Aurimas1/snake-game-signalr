@@ -14,14 +14,6 @@ public class CreateTournamentDtoValidator : AbstractValidator<CreateTournamentDt
     }
 }
 
-public class UpdateTournamentDtoValidator : AbstractValidator<UpdateTournamentDto>
-{
-    public UpdateTournamentDtoValidator()
-    {
-        RuleFor(x => x.ParticipantId).NotEmpty();
-    }
-}
-
 public class CreateRoundDtoValidator : AbstractValidator<CreateRoundDto>
 {
     public CreateRoundDtoValidator(DataContext dbContext)

@@ -11,7 +11,6 @@ public class Round
     public Tournament Tournament { get; set; }
 }
 
-//public record RoundDto(int Id, int Index, MapDto Map);
 public record RoundDto(int Id, int Index, int MapId);
 
 public record CreateRoundDto(int Index, int MapId);
@@ -20,8 +19,6 @@ public static class RoundMapper
 {
     public static RoundDto ToDto(this Round round)
     {
-        // FIX?: tournament creation saveAsync(), doesn't load Map
-        //return new RoundDto(round.Id, round.Index, round.Map.ToDto());
         return new RoundDto(round.Id, round.Index, round.MapId);
     }
 
