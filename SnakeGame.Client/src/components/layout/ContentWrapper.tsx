@@ -5,7 +5,7 @@ interface Props {
   children: ReactNode;
 }
 
-export const ContentWrapper = (props: Props) => {
+const ContentWrapper = (props: Props) => {
   return (
     <div className="m-auto flex items-center justify-center">
       <div className="flex flex-col items-center justify-center border border-black bg-gray-200 p-5">
