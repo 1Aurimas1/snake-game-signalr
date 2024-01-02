@@ -13,6 +13,8 @@ public interface IMapService
     Task Update(Map map, UpdateMapDto dto, int userId);
     Task Remove(Map map);
     Task Publish(Map map);
+    Task<List<Obstacle>> GetAllObstacles();
+    Task<List<Obstacle>> GetAllObstaclesByIds(int[] ids);
 }
 
 public class MapService : IMapService
@@ -41,7 +43,8 @@ public class MapService : IMapService
 
     public async Task<Map?> GetUserMap(int userId, int id)
     {
-        return await _dbContext.Maps
+        return await _dbContext
+            .Maps
             .WithIncludes()
             .FirstOrDefaultAsync(m => m.Creator.Id == userId && m.Id == id);
     }
@@ -49,7 +52,8 @@ public class MapService : IMapService
     public async Task<Map> Add(CreateMapDto dto, User creator)
     {
         var uniqueObstacleIds = dto.MapObstacles.Select(x => x.ObstacleId).Distinct().ToList();
-        var uniqueObstacles = _dbContext.Obstacles
+        var uniqueObstacles = _dbContext
+            .Obstacles
             .Where(x => uniqueObstacleIds.Contains(x.Id))
             .ToDictionary(x => x.Id, x => x);
 
@@ -101,6 +105,22 @@ public class MapService : IMapService
         map.IsPublished = true;
 
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<List<Obstacle>> GetAllObstacles()
+    {
+        return await _dbContext.Obstacles.Include(o => o.Points).ToListAsync();
+    }
+
+    public async Task<List<Obstacle>> GetAllObstaclesByIds(int[] ids)
+    {
+        var uniqueIds = ids.Distinct().ToList();
+
+        return await _dbContext
+            .Obstacles
+            .Include(o => o.Points)
+            .Where(o => uniqueIds.Contains(o.Id))
+            .ToListAsync();
     }
 }
 

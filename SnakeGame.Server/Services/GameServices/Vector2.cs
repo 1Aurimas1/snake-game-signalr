@@ -1,6 +1,10 @@
+using System.Text.Json.Serialization;
+
 public class Vector2
 {
+    [JsonPropertyName("X")]
     public int X { get; private set; }
+    [JsonPropertyName("Y")]
     public int Y { get; private set; }
 
     public Vector2(int x, int y)
