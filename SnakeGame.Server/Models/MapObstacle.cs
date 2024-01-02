@@ -12,21 +12,24 @@ public class MapObstacle
     public Map Map { get; set; }
 }
 
-public record MapObstacleDto(int ObstacleId, Point Position);
+public record MapObstacleDto(int MapObstacleId, PointDto Position, int ObstacleId);
 
-public record CreateMapObstacleDto(int ObstacleId, int MapId, CreatePointDto Position);
+public record CreateMapObstacleDto(int ObstacleId, CreatePointDto Position);
 
 public static class MapObstacleMapper
 {
     public static MapObstacleDto ToDto(this MapObstacle mapObstacle) =>
-        new MapObstacleDto(mapObstacle.Id, mapObstacle.Position);
+        new MapObstacleDto(
+            mapObstacle.Id,
+            mapObstacle.Position.ToDto(),
+            mapObstacle.ObstacleId
+        );
 
     public static MapObstacle FromCreateDto(this CreateMapObstacleDto dto)
     {
         return new MapObstacle
         {
             ObstacleId = dto.ObstacleId,
-            MapId = dto.MapId,
             Position = dto.Position.FromCreateDto()
         };
     }

@@ -17,6 +17,7 @@ public record MapDto(
     string Name,
     List<MapObstacleDto> MapObstacles,
     double Rating,
+    bool IsPublished,
     UserDto Creator
 );
 
@@ -32,6 +33,7 @@ public static class MapMapper
             map.Name,
             map.MapObstacles.Select(o => o.ToDto()).ToList(),
             map.Rating,
+            map.IsPublished,
             map.Creator.ToDto()
         );
 

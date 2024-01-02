@@ -29,6 +29,8 @@ public record RefreshAccessTokenDto(string RefreshToken);
 
 public record UserDto(int Id, string UserName);
 
+public record PrivateUserDto(int Id, string UserName, string Email);
+
 public record LoginUserDto(string UserName, string Password);
 
 public class BaseUserDto
@@ -48,6 +50,9 @@ public class UpdateUserDto : BaseUserDto { }
 public static class UserMapper
 {
     public static UserDto ToDto(this User user) => new UserDto(user.Id, user.UserName);
+
+    public static PrivateUserDto ToPrivateDto(this User user) =>
+        new PrivateUserDto(user.Id, user.UserName, user.Email);
 
     public static User FromRegisterDto(this RegisterUserDto dto)
     {
