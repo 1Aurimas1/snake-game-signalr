@@ -1,7 +1,7 @@
-using SnakeGame.Server.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 using SnakeGame.Tests.Helpers;
 
@@ -21,7 +21,7 @@ public class UsersInMemoryTests
 
         var result = await UsersEndpoints.GetAllUsers(userService);
 
-        Assert.IsType<Ok<List<UserDto>>>(result);
+        Assert.IsType<Ok<List<PrivateUserDto>>>(result);
 
         Assert.NotNull(result.Value);
 
@@ -54,13 +54,17 @@ public class UsersInMemoryTests
             .Setup(m => m.FindByIdAsync(id.ToString()))
             .ReturnsAsync(context.Users.FirstOrDefault(u => u.Id == id));
 
+        var httpContext = HttpContextHelper.CreateHttpContext(
+            id,
+            new List<string> { UserRoles.Basic }
+        );
         UserService userService = new(mockUserManager.Object);
 
-        var result = await UsersEndpoints.GetUser(id, userService);
+        var result = await UsersEndpoints.GetUser(id, httpContext, userService);
 
-        Assert.IsType<Results<Ok<UserDto>, NotFound<CustomError>>>(result);
+        Assert.IsType<Results<Ok<PrivateUserDto>, ForbidHttpResult, NotFound<CustomError>>>(result);
 
-        var okResult = (Ok<UserDto>)result.Result;
+        var okResult = (Ok<PrivateUserDto>)result.Result;
 
         Assert.NotNull(okResult.Value);
 
@@ -91,21 +95,18 @@ public class UsersInMemoryTests
 
         var updateUserDto = new UpdateUserDto { UserName = newName, Email = newEmail };
 
-        var result = await UsersEndpoints.UpdateUser(
-            httpContext,
-            updateUserDto,
-            userService
-        );
+        var result = await UsersEndpoints.UpdateUser(id, httpContext, updateUserDto, userService);
 
         Assert.IsType<
             Results<
-                Ok<UserDto>,
+                Ok<PrivateUserDto>,
                 UnprocessableEntity<CustomError>,
+                ForbidHttpResult,
                 NotFound<CustomError>
             >
         >(result);
 
-        var okResult = (Ok<UserDto>)result.Result;
+        var okResult = (Ok<PrivateUserDto>)result.Result;
 
         Assert.NotNull(okResult);
 

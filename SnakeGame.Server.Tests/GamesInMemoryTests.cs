@@ -1,6 +1,6 @@
-using SnakeGame.Server.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Moq;
+using SnakeGame.Server.Models;
 using SnakeGame.Server.Services.DataServices;
 using SnakeGame.Tests.Helpers;
 
@@ -205,11 +205,7 @@ public class GamesInMemoryTests
         );
 
         Assert.IsType<
-            Results<
-                Ok<GameDto>,
-                UnprocessableEntity<CustomError>,
-                NotFound<CustomError>
-            >
+            Results<Ok<GameDto>, UnprocessableEntity<CustomError>, NotFound<CustomError>>
         >(result);
 
         var okResult = (Ok<GameDto>)result.Result;
@@ -245,11 +241,22 @@ public class GamesInMemoryTests
 
         var initialGameCount = context.Games.Count();
 
-        var result = await GamesEndpoints.RemoveUserGame(id, httpContext, userService, gameService);
-
-        Assert.IsType<Results<NoContent, UnprocessableEntity<CustomError>, NotFound<CustomError>>>(
-            result
+        var result = await GamesEndpoints.RemoveUserGame(
+            userId,
+            id,
+            httpContext,
+            userService,
+            gameService
         );
+
+        Assert.IsType<
+            Results<
+                NoContent,
+                UnprocessableEntity<CustomError>,
+                ForbidHttpResult,
+                NotFound<CustomError>
+            >
+        >(result);
 
         var noContentResult = (NoContent)result.Result;
 
